@@ -1,0 +1,28 @@
+<Solution>
+  <Folder Name="/src/" />
+  <Folder Name="/src/Host/">
+    <Project Path="api/ECommerce.Host/ECommerce.Host.csproj" />
+  </Folder>
+  <Folder Name="/src/Modules/" />
+  <Folder Name="/src/Modules/Customers/">
+    <Project Path="api/Modules/Customers/ECommerce.Modules.Customers/ECommerce.Modules.Customers.csproj" />
+  </Folder>
+  <Folder Name="/src/Modules/Inventory/">
+    <Project Path="api/Modules/Inventory/ECommerce.Modules.Inventory/ECommerce.Modules.Inventory.csproj" />
+  </Folder>
+  <Folder Name="/src/Modules/Orders/">
+    <Project Path="api/Modules/Orders/ECommerce.Modules.Orders/ECommerce.Modules.Orders.csproj" />
+  </Folder>
+  <Folder Name="/src/Modules/Products/">
+    <Project Path="api/Modules/Products/ECommerce.Modules.Products/ECommerce.Modules.Products.csproj" />
+  </Folder>
+  <Folder Name="/src/Modules/Users/">
+    <Project Path="api/Modules/Users/ECommerce.Modules.Users/ECommerce.Modules.Users.csproj" />
+  </Folder>
+  <Folder Name="/src/Shared/">
+    <Project Path="api/Shared/ECommerce.Shared/ECommerce.Shared.csproj" />
+  </Folder>
+  <Folder Name="/src/Tools/">
+    <Project Path="api/Tools/ECommerce.EmailWorker/ECommerce.EmailWorker.csproj" />
+  </Folder>
+</Solution>
