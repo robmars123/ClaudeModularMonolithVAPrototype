@@ -4,7 +4,6 @@ using ECommerce.Modules.Users.Services;
 using ECommerce.Shared.Common;
 using ECommerce.Shared.Mediator;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.Extensions.Configuration;
 
 namespace ECommerce.Modules.Users.Features.LoginUser;
 
@@ -12,12 +11,11 @@ public class LoginUserHandler : IRequestHandler<LoginUserCommand, Result<AuthRes
 {
     private readonly UserManager<ApplicationUser> _users;
     private readonly SignInManager<ApplicationUser> _signIn;
-    private readonly TokenService _tokens;
-    private readonly IConfiguration _config;
+    private readonly AuthTokenIssuer _issuer;
 
-    public LoginUserHandler(UserManager<ApplicationUser> users, SignInManager<ApplicationUser> signIn, TokenService tokens, IConfiguration config)
+    public LoginUserHandler(UserManager<ApplicationUser> users, SignInManager<ApplicationUser> signIn, AuthTokenIssuer issuer)
     {
-        _users = users; _signIn = signIn; _tokens = tokens; _config = config;
+        _users = users; _signIn = signIn; _issuer = issuer;
     }
 
     public async Task<Result<AuthResponse>> Handle(LoginUserCommand cmd, CancellationToken ct)
@@ -31,8 +29,7 @@ public class LoginUserHandler : IRequestHandler<LoginUserCommand, Result<AuthRes
             return Result<AuthResponse>.Failure(result.IsLockedOut ? "Account locked. Try again later." : "Invalid email or password.");
 
         var roles = await _users.GetRolesAsync(user);
-        var expiry = double.Parse(_config["JwtSettings:ExpiryMinutes"] ?? "60");
-
-        return Result<AuthResponse>.Success(new AuthResponse(_tokens.Generate(user, roles), user.Email!, user.FullName, roles, DateTime.UtcNow.AddMinutes(expiry)));
+        var response = await _issuer.IssueAsync(user, roles, ct);
+        return Result<AuthResponse>.Success(response);
     }
 }

@@ -13,7 +13,7 @@ public class Endpoint : Endpoint<CreateInventoryItemRequest>
     public override void Configure()
     {
         Post("/api/inventory");
-        Roles("Admin");
+        Roles("Admin", "ProductManager");
     }
 
     public override async Task HandleAsync(CreateInventoryItemRequest req, CancellationToken ct)

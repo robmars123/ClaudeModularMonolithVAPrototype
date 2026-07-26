@@ -16,43 +16,73 @@ public class PlaceOrderHandler : IRequestHandler<PlaceOrderCommand, Result<Order
     private readonly OrdersDbContext _db;
     private readonly IMediator _mediator;
     private readonly IIntegrationEventPublisher _integrationEvents;
+    private readonly PlaceOrderIdempotencyGuard _idempotency;
     private readonly ILogger<PlaceOrderHandler> _logger;
 
-    public PlaceOrderHandler(OrdersDbContext db, IMediator mediator, IIntegrationEventPublisher integrationEvents, ILogger<PlaceOrderHandler> logger)
+    public PlaceOrderHandler(OrdersDbContext db, IMediator mediator, IIntegrationEventPublisher integrationEvents, PlaceOrderIdempotencyGuard idempotency, ILogger<PlaceOrderHandler> logger)
     {
-        _db = db; _mediator = mediator; _integrationEvents = integrationEvents; _logger = logger;
+        _db = db; _mediator = mediator; _integrationEvents = integrationEvents; _idempotency = idempotency; _logger = logger;
     }
 
     public async Task<Result<OrderResponse>> Handle(PlaceOrderCommand cmd, CancellationToken ct)
     {
-        var cart = await _db.Carts
-            .Include(c => c.Items)
-            .FirstOrDefaultAsync(c => c.UserId == cmd.UserId && c.Status == "Active", ct);
+        var lease = _idempotency.TryAcquire(cmd.UserId);
+        if (lease is null)
+            return Result<OrderResponse>.Failure("A request to place this order is already in progress. Please wait a moment and try again.");
 
-        if (cart is null || cart.Items.Count == 0)
-            return Result<OrderResponse>.Failure("Cart is empty.");
-
-        // Fall back to the customer's saved shipping address when none is provided.
-        var shippingAddress = cmd.ShippingAddress;
-        if (string.IsNullOrWhiteSpace(shippingAddress))
+        try
         {
-            var addressResult = await _mediator.Send(new GetCustomerShippingAddressRequest(cmd.UserId), ct);
+            var cart = await _db.Carts
+                .Include(c => c.Items)
+                .FirstOrDefaultAsync(c => c.UserId == cmd.UserId && c.Status == "Active", ct);
+
+            if (cart is null || cart.Items.Count == 0)
+                return Result<OrderResponse>.Failure("Cart is empty.");
+
+            var addressResult = await ResolveShippingAddressAsync(cmd, ct);
             if (!addressResult.IsSuccess)
-                return Result<OrderResponse>.Failure("No shipping address provided and none on file. Update your profile or supply an address.");
+                return Result<OrderResponse>.Failure(addressResult.Error!);
 
-            shippingAddress = addressResult.Value!.ToString();
+            var availabilityCheck = await CheckAvailabilityAsync(cart, ct);
+            if (!availabilityCheck.IsSuccess)
+                return Result<OrderResponse>.Failure(availabilityCheck.Error!);
+
+            return await ReserveAndPersistOrderAsync(cmd, cart, addressResult.Value!, ct);
         }
+        finally
+        {
+            _idempotency.Release(cmd.UserId, lease.Value);
+        }
+    }
 
-        // Friendly per-item availability check first...
+    // Falls back to the customer's saved shipping address when none is provided.
+    private async Task<Result<string>> ResolveShippingAddressAsync(PlaceOrderCommand cmd, CancellationToken ct)
+    {
+        if (!string.IsNullOrWhiteSpace(cmd.ShippingAddress))
+            return Result<string>.Success(cmd.ShippingAddress);
+
+        var addressResult = await _mediator.Send(new GetCustomerShippingAddressRequest(cmd.UserId), ct);
+        return addressResult.IsSuccess
+            ? Result<string>.Success(addressResult.Value!.ToString())
+            : Result<string>.Failure("No shipping address provided and none on file. Update your profile or supply an address.");
+    }
+
+    // Friendly per-item availability check — the atomic reservation below is what actually guards against concurrent checkouts.
+    private async Task<Result> CheckAvailabilityAsync(Cart cart, CancellationToken ct)
+    {
         foreach (var item in cart.Items)
         {
             var availability = await _mediator.Send(new GetStockAvailabilityRequest(item.ProductId), ct);
             var available = availability.IsSuccess ? availability.Value : 0;
             if (available < item.Quantity)
-                return Result<OrderResponse>.Failure($"Insufficient stock for '{item.ProductName}' — {available} available.");
+                return Result.Failure($"Insufficient stock for '{item.ProductName}' — {available} available.");
         }
 
-        // ...then the atomic all-or-nothing reservation guards against concurrent checkouts.
+        return Result.Success();
+    }
+
+    private async Task<Result<OrderResponse>> ReserveAndPersistOrderAsync(PlaceOrderCommand cmd, Cart cart, string shippingAddress, CancellationToken ct)
+    {
         var lines = cart.Items.Select(i => new StockLine(i.ProductId, i.Quantity)).ToList();
         var reservation = await _mediator.Send(new ReserveStockRequest(lines), ct);
         if (!reservation.IsSuccess)
@@ -62,11 +92,37 @@ public class PlaceOrderHandler : IRequestHandler<PlaceOrderCommand, Result<Order
         _db.Orders.Add(order);
         cart.Clear();
 
-        var placedEvent = new OrderPlacedEvent(order.Id, order.OrderNumber, cmd.UserId, lines);
+        // Best-effort — a missing contact just means the email consumer skips sending, never blocks the
+        // order. Explicitly caught (not just a Result failure check): an exception here must not escape
+        // and leave the reservation above uncompensated — this lookup is genuinely optional.
+        string? customerEmail = null;
+        string? customerName = null;
+        try
+        {
+            var contact = await _mediator.Send(new GetCustomerContactRequest(cmd.UserId), ct);
+            if (contact.IsSuccess)
+            {
+                customerEmail = contact.Value!.Email;
+                customerName = contact.Value!.FullName;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Could not resolve customer contact for order notification; proceeding without it.");
+        }
+
+        var placedEvent = new OrderPlacedEvent(order.Id, order.OrderNumber, cmd.UserId, lines)
+        {
+            CustomerEmail = customerEmail,
+            CustomerName = customerName,
+        };
 
         // Point-to-point: queued for exactly one consumer (see Inventory's OrderPlacedQueueConsumer).
         // Enqueued into the same change tracker as the order, so it commits atomically with it below.
         _integrationEvents.Enqueue(placedEvent, MessageKind.PointToPoint, "orders.placed.queue");
+        // Pub/sub copy for out-of-process notification subscribers (e.g. EmailWorker's order-confirmation
+        // consumer) — independent of the point-to-point queue Inventory consumes for stock commit.
+        _integrationEvents.Enqueue(placedEvent, MessageKind.PubSub, "order.placed");
 
         try
         {
@@ -74,7 +130,7 @@ public class PlaceOrderHandler : IRequestHandler<PlaceOrderCommand, Result<Order
         }
         catch
         {
-            // Compensate: neither the order nor the outbox row was persisted, so hand the reservation back.
+            // Compensate: neither the order nor the outbox rows were persisted, so hand the reservation back.
             await _mediator.Send(new ReleaseStockRequest(lines), CancellationToken.None);
             throw;
         }
@@ -84,13 +140,6 @@ public class PlaceOrderHandler : IRequestHandler<PlaceOrderCommand, Result<Order
         // reconciliation instead of turning an already-successful order into a failed request.
         await _mediator.PublishBestEffort(placedEvent, _logger, $"Order {order.OrderNumber} placed but stock commit failed; reservation left in place", ct);
 
-        return Result<OrderResponse>.Success(MapToResponse(order));
+        return Result<OrderResponse>.Success(OrderResponse.FromEntity(order));
     }
-
-    private static OrderResponse MapToResponse(Order o) => new(
-        o.Id, o.OrderNumber, o.UserId,
-        o.Status.ToString(), o.TotalAmount,
-        o.ShippingAddress, o.Notes,
-        o.Items.Select(i => new OrderItemResponse(i.Id, i.ProductId, i.ProductName, i.UnitPrice, i.Quantity, i.TotalPrice)).ToList(),
-        o.CreatedAt, o.UpdatedAt);
 }

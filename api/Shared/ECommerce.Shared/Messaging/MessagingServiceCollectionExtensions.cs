@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Options;
 
 namespace ECommerce.Shared.Messaging;
 
@@ -14,7 +15,10 @@ public static class MessagingServiceCollectionExtensions
     /// </summary>
     public static IServiceCollection AddRabbitMqMessaging(this IServiceCollection services, IConfiguration configuration)
     {
-        services.Configure<RabbitMqOptions>(configuration.GetSection(RabbitMqOptions.SectionName));
+        services.AddOptions<RabbitMqOptions>()
+            .Bind(configuration.GetSection(RabbitMqOptions.SectionName))
+            .ValidateOnStart();
+        services.TryAddSingleton<IValidateOptions<RabbitMqOptions>, RabbitMqOptionsValidator>();
 
         services.TryAddSingleton<IRabbitMqConnectionProvider, RabbitMqConnectionProvider>();
         services.TryAddSingleton<IRabbitMqPublisher, RabbitMqPublisher>();

@@ -25,4 +25,12 @@
   <Folder Name="/src/Tools/">
     <Project Path="api/Tools/ECommerce.EmailWorker/ECommerce.EmailWorker.csproj" />
   </Folder>
+  <Folder Name="/src/Tests/">
+    <Project Path="api/Tests/ECommerce.Host.Tests/ECommerce.Host.Tests.csproj" />
+    <Project Path="api/Tests/ECommerce.Shared.Tests/ECommerce.Shared.Tests.csproj" />
+    <Project Path="api/Tests/ECommerce.Modules.Orders.Tests/ECommerce.Modules.Orders.Tests.csproj" />
+    <Project Path="api/Tests/ECommerce.Modules.Inventory.Tests/ECommerce.Modules.Inventory.Tests.csproj" />
+    <Project Path="api/Tests/ECommerce.Modules.Products.Tests/ECommerce.Modules.Products.Tests.csproj" />
+    <Project Path="api/Tests/ECommerce.Modules.Users.Tests/ECommerce.Modules.Users.Tests.csproj" />
+  </Folder>
 </Solution>

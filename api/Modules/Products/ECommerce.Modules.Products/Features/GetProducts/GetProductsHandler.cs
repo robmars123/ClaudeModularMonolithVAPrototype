@@ -22,11 +22,11 @@ public class GetProductsHandler : IRequestHandler<GetProductsQuery, Result<Paged
             query = query.Where(p => p.Name.ToLower().Contains(s) || p.SKU.ToLower().Contains(s));
         }
 
-        var total = await query.CountAsync(ct);
-        var items = await query.OrderBy(p => p.Name).Skip((q.Page - 1) * q.PageSize).Take(q.PageSize)
-            .Select(p => new ProductResponse(p.Id, p.Name, p.Description, p.SKU, p.Price, p.ImageUrl, p.IsActive, p.CategoryId, p.Category.Name, p.CreatedAt, p.UpdatedAt))
-            .ToListAsync(ct);
+        var result = await query.OrderBy(p => p.Name).ToPagedResultAsync(
+            q.Page, q.PageSize,
+            p => new ProductResponse(p.Id, p.Name, p.Description, p.SKU, p.Price, p.ImageUrl, p.IsActive, p.CategoryId, p.Category.Name, p.CreatedAt, p.UpdatedAt),
+            ct);
 
-        return Result<PagedResult<ProductResponse>>.Success(new PagedResult<ProductResponse>(items, total, q.Page, q.PageSize));
+        return Result<PagedResult<ProductResponse>>.Success(result);
     }
 }

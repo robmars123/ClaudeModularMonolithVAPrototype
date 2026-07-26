@@ -12,7 +12,7 @@ public class Endpoint : Endpoint<GetInventoryByProductRequest, InventoryResponse
     public override void Configure()
     {
         Get("/api/inventory/{productId}");
-        Roles("Admin");
+        Roles("Admin", "ProductManager");
     }
 
     public override async Task HandleAsync(GetInventoryByProductRequest req, CancellationToken ct)

@@ -1,3 +1,4 @@
+using ECommerce.Modules.Orders.Features.PlaceOrder;
 using ECommerce.Modules.Orders.Persistence;
 using ECommerce.Shared.Contracts;
 using ECommerce.Shared.Mediator;
@@ -16,6 +17,7 @@ public class OrdersModule : IModuleRegistration
             options.UseSqlServer(configuration.GetConnectionString("DefaultConnection")));
 
         services.AddMediator(typeof(OrdersModule).Assembly);
+        services.AddSingleton<PlaceOrderIdempotencyGuard>();
 
         services.AddScoped<IIntegrationEventPublisher, EfOutboxIntegrationEventPublisher<OrdersDbContext>>();
         services.AddScoped<IOutboxStore, EfOutboxStore<OrdersDbContext>>();

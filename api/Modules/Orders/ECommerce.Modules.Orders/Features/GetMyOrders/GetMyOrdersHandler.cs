@@ -20,12 +20,7 @@ public class GetMyOrdersHandler : IRequestHandler<GetMyOrdersQuery, Result<IRead
             .OrderByDescending(o => o.CreatedAt)
             .ToListAsync(ct);
 
-        var result = orders.Select(o => new OrderResponse(
-            o.Id, o.OrderNumber, o.UserId,
-            o.Status.ToString(), o.TotalAmount,
-            o.ShippingAddress, o.Notes,
-            o.Items.Select(i => new OrderItemResponse(i.Id, i.ProductId, i.ProductName, i.UnitPrice, i.Quantity, i.TotalPrice)).ToList(),
-            o.CreatedAt, o.UpdatedAt)).ToList();
+        var result = orders.Select(OrderResponse.FromEntity).ToList();
 
         return Result<IReadOnlyList<OrderResponse>>.Success(result);
     }

@@ -2,6 +2,7 @@ using ECommerce.Modules.Orders.Entities;
 using ECommerce.Modules.Orders.Features.PlaceOrder;
 using ECommerce.Modules.Orders.Persistence;
 using ECommerce.Shared.Common;
+using ECommerce.Shared.Contracts.Customers;
 using ECommerce.Shared.Contracts.Inventory;
 using ECommerce.Shared.IntegrationEvents;
 using ECommerce.Shared.Mediator;
@@ -49,6 +50,11 @@ public sealed class PlaceOrderHandlerTests
                 _ => Result.Failure("unexpected request")
             });
 
+        // No customer profile seeded in these tests — the order-confirmation contact lookup is
+        // best-effort, so a failure here must not affect PlaceOrder's own outcome.
+        mediator.Send(Arg.Any<GetCustomerContactRequest>(), Arg.Any<CancellationToken>())
+            .Returns(Result<CustomerContactDto>.Failure("not found"));
+
         return mediator;
     }
 
@@ -64,7 +70,7 @@ public sealed class PlaceOrderHandlerTests
         await using var context = db.CreateContext();
         var mediator = MakeMediator();
         var integrationEvents = new EfOutboxIntegrationEventPublisher<OrdersDbContext>(context, Substitute.For<ICorrelationIdAccessor>());
-        var handler = new PlaceOrderHandler(context, mediator, integrationEvents, Substitute.For<ILogger<PlaceOrderHandler>>());
+        var handler = new PlaceOrderHandler(context, mediator, integrationEvents, new PlaceOrderIdempotencyGuard(), Substitute.For<ILogger<PlaceOrderHandler>>());
 
         var result = await handler.Handle(new PlaceOrderCommand(UserId, "123 Main St", null), CancellationToken.None);
 
@@ -72,7 +78,8 @@ public sealed class PlaceOrderHandlerTests
 
         await using var verify = db.CreateContext();
         Assert.Single(await verify.Orders.ToListAsync());
-        Assert.Single(await verify.OutboxMessages.ToListAsync());
+        // Two outbox rows for the one OrderPlacedEvent: point-to-point (Inventory's stock commit) + pub/sub (order-confirmation notification).
+        Assert.Equal(2, await verify.OutboxMessages.CountAsync());
 
         var cart = await verify.Carts.Include(c => c.Items).SingleAsync();
         Assert.Empty(cart.Items);
@@ -93,7 +100,7 @@ public sealed class PlaceOrderHandlerTests
         await using var context = db.CreateContext();
         var mediator = MakeMediator(stockAvailable: false);
         var integrationEvents = new EfOutboxIntegrationEventPublisher<OrdersDbContext>(context, Substitute.For<ICorrelationIdAccessor>());
-        var handler = new PlaceOrderHandler(context, mediator, integrationEvents, Substitute.For<ILogger<PlaceOrderHandler>>());
+        var handler = new PlaceOrderHandler(context, mediator, integrationEvents, new PlaceOrderIdempotencyGuard(), Substitute.For<ILogger<PlaceOrderHandler>>());
 
         var result = await handler.Handle(new PlaceOrderCommand(UserId, "123 Main St", null), CancellationToken.None);
 
@@ -120,7 +127,7 @@ public sealed class PlaceOrderHandlerTests
         await using var throwingContext = CreateThrowingContext(db);
         var mediator = MakeMediator();
         var integrationEvents = new EfOutboxIntegrationEventPublisher<OrdersDbContext>(throwingContext, Substitute.For<ICorrelationIdAccessor>());
-        var handler = new PlaceOrderHandler(throwingContext, mediator, integrationEvents, Substitute.For<ILogger<PlaceOrderHandler>>());
+        var handler = new PlaceOrderHandler(throwingContext, mediator, integrationEvents, new PlaceOrderIdempotencyGuard(), Substitute.For<ILogger<PlaceOrderHandler>>());
 
         await Assert.ThrowsAsync<DbUpdateException>(() =>
             handler.Handle(new PlaceOrderCommand(UserId, "123 Main St", null), CancellationToken.None));

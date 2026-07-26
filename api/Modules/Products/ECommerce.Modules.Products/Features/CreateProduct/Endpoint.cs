@@ -14,7 +14,7 @@ public class Endpoint : Endpoint<CreateProductRequest, ProductResponse>
     public override void Configure()
     {
         Post("/api/products");
-        Roles("Admin");
+        Roles("Admin", "ProductManager");
     }
 
     public override async Task HandleAsync(CreateProductRequest req, CancellationToken ct)

@@ -16,6 +16,7 @@ builder.Services.AddDbContext<EmailWorkerDbContext>(options =>
 builder.Services.AddScoped<IInboxStore, EfInboxStore<EmailWorkerDbContext>>();
 
 builder.Services.AddHostedService<EmailNotificationConsumer>();
+builder.Services.AddHostedService<OrderConfirmationConsumer>();
 
 var host = builder.Build();
 

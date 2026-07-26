@@ -12,7 +12,7 @@ public class Endpoint : Endpoint<AddStockRequest>
     public override void Configure()
     {
         Post("/api/inventory/{productId}/add-stock");
-        Roles("Admin");
+        Roles("Admin", "ProductManager");
     }
 
     public override async Task HandleAsync(AddStockRequest req, CancellationToken ct)

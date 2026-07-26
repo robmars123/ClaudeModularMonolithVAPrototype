@@ -13,7 +13,7 @@ public class Endpoint : Endpoint<UpdateProductRequest, ProductResponse>
     public override void Configure()
     {
         Put("/api/products/{id}");
-        Roles("Admin");
+        Roles("Admin", "ProductManager");
     }
 
     public override async Task HandleAsync(UpdateProductRequest req, CancellationToken ct)

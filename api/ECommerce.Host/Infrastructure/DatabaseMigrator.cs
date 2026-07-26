@@ -7,6 +7,7 @@ using ECommerce.Modules.Products.Entities;
 using ECommerce.Modules.Products.Persistence;
 using ECommerce.Modules.Users.Entities;
 using ECommerce.Modules.Users.Persistence;
+using ECommerce.Shared.Common;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
@@ -46,9 +47,8 @@ public static class DatabaseMigrator
     private static async Task SeedRolesAsync(IServiceProvider services, ILogger logger)
     {
         var roleManager = services.GetRequiredService<RoleManager<IdentityRole>>();
-        string[] roles = ["Admin", "Customer"];
 
-        foreach (var role in roles)
+        foreach (var role in Roles.All)
         {
             if (!await roleManager.RoleExistsAsync(role))
             {
@@ -79,7 +79,7 @@ public static class DatabaseMigrator
         var result = await userManager.CreateAsync(admin, adminPassword);
         if (result.Succeeded)
         {
-            await userManager.AddToRoleAsync(admin, "Admin");
+            await userManager.AddToRoleAsync(admin, Roles.Admin);
             logger.LogInformation("Seeded admin user: {Email}", adminEmail);
         }
     }

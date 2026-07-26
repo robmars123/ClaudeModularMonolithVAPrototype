@@ -12,14 +12,13 @@ public class GetAllCustomersHandler : IRequestHandler<GetAllCustomersQuery, Resu
 
     public async Task<Result<PagedResult<CustomerListResponse>>> Handle(GetAllCustomersQuery q, CancellationToken ct)
     {
-        var query = _db.Customers.AsNoTracking().Where(c => c.IsActive);
+        var query = _db.Customers.AsNoTracking().Where(c => c.IsActive).OrderBy(c => c.LastName);
 
-        var total = await query.CountAsync(ct);
-        var customers = await query
-            .OrderBy(c => c.LastName).Skip((q.Page - 1) * q.PageSize).Take(q.PageSize)
-            .Select(c => new CustomerListResponse(c.Id, c.UserId, c.FirstName, c.LastName, c.FullName, c.Email, c.Phone, null, c.CreatedAt))
-            .ToListAsync(ct);
+        var result = await query.ToPagedResultAsync(
+            q.Page, q.PageSize,
+            c => new CustomerListResponse(c.Id, c.UserId, c.FirstName, c.LastName, c.FullName, c.Email, c.Phone, null, c.CreatedAt),
+            ct);
 
-        return Result<PagedResult<CustomerListResponse>>.Success(new PagedResult<CustomerListResponse>(customers, total, q.Page, q.PageSize));
+        return Result<PagedResult<CustomerListResponse>>.Success(result);
     }
 }

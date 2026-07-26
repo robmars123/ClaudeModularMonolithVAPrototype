@@ -12,7 +12,7 @@ public class Endpoint : Endpoint<GetAllCustomersRequest, PagedResult<CustomerLis
     public override void Configure()
     {
         Get("/api/customers");
-        Roles("Admin");
+        Roles("Admin", "Support");
     }
 
     public override async Task HandleAsync(GetAllCustomersRequest req, CancellationToken ct)

@@ -19,13 +19,8 @@ public class GetOrderByIdHandler : IRequestHandler<GetOrderByIdQuery, Result<Ord
             .FirstOrDefaultAsync(o => o.Id == q.OrderId, ct);
 
         if (order is null) return Result<OrderResponse>.Failure("Order not found.");
-        if (!q.IsAdmin && order.UserId != q.UserId) return Result<OrderResponse>.Failure("Order not found.");
+        if (!q.CanViewAny && order.UserId != q.UserId) return Result<OrderResponse>.Failure("Order not found.");
 
-        return Result<OrderResponse>.Success(new OrderResponse(
-            order.Id, order.OrderNumber, order.UserId,
-            order.Status.ToString(), order.TotalAmount,
-            order.ShippingAddress, order.Notes,
-            order.Items.Select(i => new OrderItemResponse(i.Id, i.ProductId, i.ProductName, i.UnitPrice, i.Quantity, i.TotalPrice)).ToList(),
-            order.CreatedAt, order.UpdatedAt));
+        return Result<OrderResponse>.Success(OrderResponse.FromEntity(order));
     }
 }

@@ -13,7 +13,7 @@ public class Endpoint : Endpoint<CreateCategoryRequest, CategoryResponse>
     public override void Configure()
     {
         Post("/api/categories");
-        Roles("Admin");
+        Roles("Admin", "ProductManager");
     }
 
     public override async Task HandleAsync(CreateCategoryRequest req, CancellationToken ct)

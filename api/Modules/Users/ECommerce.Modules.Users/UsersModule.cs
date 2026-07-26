@@ -32,6 +32,7 @@ public class UsersModule : IModuleRegistration
         .AddDefaultTokenProviders();
 
         services.AddScoped<TokenService>();
+        services.AddScoped<AuthTokenIssuer>();
         services.AddMediator(typeof(UsersModule).Assembly);
 
         services.AddScoped<IIntegrationEventPublisher, EfOutboxIntegrationEventPublisher<UsersDbContext>>();
