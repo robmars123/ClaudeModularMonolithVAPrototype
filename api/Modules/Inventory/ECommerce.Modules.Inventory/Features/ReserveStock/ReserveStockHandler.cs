@@ -3,6 +3,7 @@ using ECommerce.Shared.Common;
 using ECommerce.Shared.Contracts.Inventory;
 using ECommerce.Shared.Mediator;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 
 namespace ECommerce.Modules.Inventory.Features.ReserveStock;
 
@@ -21,12 +22,12 @@ public class ReserveStockHandler : IRequestHandler<ReserveStockRequest, Result>
         if (request.Lines.Count == 0)
             return Result.Failure("Nothing to reserve.");
 
-        await using var transaction = await _db.Database.BeginTransactionAsync(ct);
+        await using IDbContextTransaction transaction = await _db.Database.BeginTransactionAsync(ct);
 
-        foreach (var line in request.Lines)
+        foreach (StockLine line in request.Lines)
         {
             // Guarded update: only reserves when enough unreserved stock remains at commit time.
-            var updated = await _db.InventoryItems
+            int updated = await _db.InventoryItems
                 .Where(i => i.ProductId == line.ProductId
                             && i.QuantityOnHand - i.ReservedQuantity >= line.Quantity)
                 .ExecuteUpdateAsync(s => s

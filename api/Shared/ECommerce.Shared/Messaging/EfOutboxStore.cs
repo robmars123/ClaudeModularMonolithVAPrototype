@@ -15,7 +15,7 @@ public sealed class EfOutboxStore<TDbContext>(TDbContext db) : IOutboxStore
 
     public async Task MarkProcessedAsync(Guid id, CancellationToken ct = default)
     {
-        var message = await db.OutboxMessages.FindAsync([id], ct);
+        OutboxMessage? message = await db.OutboxMessages.FindAsync([id], ct);
         if (message is null)
             return;
 
@@ -25,7 +25,7 @@ public sealed class EfOutboxStore<TDbContext>(TDbContext db) : IOutboxStore
 
     public async Task MarkFailedAsync(Guid id, string error, CancellationToken ct = default)
     {
-        var message = await db.OutboxMessages.FindAsync([id], ct);
+        OutboxMessage? message = await db.OutboxMessages.FindAsync([id], ct);
         if (message is null)
             return;
 

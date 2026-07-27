@@ -1,3 +1,4 @@
+using ECommerce.Modules.Customers.Entities;
 using ECommerce.Modules.Customers.Persistence;
 using ECommerce.Shared.Common;
 using ECommerce.Shared.Mediator;
@@ -12,9 +13,9 @@ public class GetAllCustomersHandler : IRequestHandler<GetAllCustomersQuery, Resu
 
     public async Task<Result<PagedResult<CustomerListResponse>>> Handle(GetAllCustomersQuery q, CancellationToken ct)
     {
-        var query = _db.Customers.AsNoTracking().Where(c => c.IsActive).OrderBy(c => c.LastName);
+        IOrderedQueryable<Customer> query = _db.Customers.AsNoTracking().Where(c => c.IsActive).OrderBy(c => c.LastName);
 
-        var result = await query.ToPagedResultAsync(
+        PagedResult<CustomerListResponse> result = await query.ToPagedResultAsync(
             q.Page, q.PageSize,
             c => new CustomerListResponse(c.Id, c.UserId, c.FirstName, c.LastName, c.FullName, c.Email, c.Phone, null, c.CreatedAt),
             ct);

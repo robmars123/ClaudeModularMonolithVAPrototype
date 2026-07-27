@@ -12,10 +12,10 @@ public class GetUserProfileHandler : IRequestHandler<GetUserProfileQuery, Result
 
     public async Task<Result<UserProfileResponse>> Handle(GetUserProfileQuery query, CancellationToken ct)
     {
-        var user = await _users.FindByIdAsync(query.UserId);
+        ApplicationUser? user = await _users.FindByIdAsync(query.UserId);
         if (user is null) return Result<UserProfileResponse>.Failure("User not found.");
 
-        var roles = await _users.GetRolesAsync(user);
+        IList<string> roles = await _users.GetRolesAsync(user);
         return Result<UserProfileResponse>.Success(new UserProfileResponse(user.Id, user.Email!, user.FirstName, user.LastName, user.FullName, roles, user.CreatedAt));
     }
 }

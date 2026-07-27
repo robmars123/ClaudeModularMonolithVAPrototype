@@ -17,19 +17,19 @@ public static class MediatorServiceCollectionExtensions
         services.TryAddScoped<ISender>(sp => sp.GetRequiredService<IMediator>());
         services.TryAddScoped<IPublisher>(sp => sp.GetRequiredService<IMediator>());
 
-        foreach (var assembly in assemblies.Distinct())
+        foreach (Assembly? assembly in assemblies.Distinct())
         {
-            foreach (var implementation in assembly.GetTypes())
+            foreach (Type implementation in assembly.GetTypes())
             {
                 if (implementation is not { IsClass: true, IsAbstract: false, IsGenericTypeDefinition: false })
                     continue;
 
-                foreach (var service in implementation.GetInterfaces())
+                foreach (Type service in implementation.GetInterfaces())
                 {
                     if (!service.IsGenericType)
                         continue;
 
-                    var definition = service.GetGenericTypeDefinition();
+                    Type definition = service.GetGenericTypeDefinition();
                     if (definition != typeof(IRequestHandler<,>) && definition != typeof(INotificationHandler<>))
                         continue;
 

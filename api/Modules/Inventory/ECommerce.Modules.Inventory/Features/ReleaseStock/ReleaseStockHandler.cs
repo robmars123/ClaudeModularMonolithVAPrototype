@@ -1,3 +1,4 @@
+using ECommerce.Modules.Inventory.Entities;
 using ECommerce.Modules.Inventory.Persistence;
 using ECommerce.Shared.Common;
 using ECommerce.Shared.Contracts.Inventory;
@@ -14,9 +15,9 @@ public class ReleaseStockHandler : IRequestHandler<ReleaseStockRequest, Result>
 
     public async Task<Result> Handle(ReleaseStockRequest request, CancellationToken ct)
     {
-        foreach (var line in request.Lines)
+        foreach (StockLine line in request.Lines)
         {
-            var item = await _db.InventoryItems
+            InventoryItem? item = await _db.InventoryItems
                 .FirstOrDefaultAsync(i => i.ProductId == line.ProductId, ct);
 
             item?.Release(line.Quantity);

@@ -21,7 +21,7 @@ public sealed class OrderConfirmationConsumer(IRabbitMqConnectionProvider connec
 
     protected override Task HandleAsync(string type, string payload, CancellationToken ct)
     {
-        var evt = JsonSerializer.Deserialize<OrderPlacedEvent>(payload);
+        OrderPlacedEvent? evt = JsonSerializer.Deserialize<OrderPlacedEvent>(payload);
         if (evt is null)
         {
             logger.LogWarning("Received {Type} but could not deserialize payload: {Payload}", type, payload);

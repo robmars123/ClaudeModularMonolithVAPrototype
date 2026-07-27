@@ -15,18 +15,18 @@ public sealed class RetryPolicyTests
     [Fact]
     public void WithIncrementedAttempt_increments_from_the_current_value()
     {
-        var headers = RetryPolicy.WithIncrementedAttempt(null);
+        Dictionary<string, object?> headers = RetryPolicy.WithIncrementedAttempt(null);
         Assert.Equal(1, RetryPolicy.GetAttempt(headers));
 
-        var next = RetryPolicy.WithIncrementedAttempt(headers);
+        Dictionary<string, object?> next = RetryPolicy.WithIncrementedAttempt(headers);
         Assert.Equal(2, RetryPolicy.GetAttempt(next));
     }
 
     [Fact]
     public void WithIncrementedAttempt_preserves_other_headers()
     {
-        var original = new Dictionary<string, object?> { ["x-custom"] = "value" };
-        var next = RetryPolicy.WithIncrementedAttempt(original);
+        Dictionary<string, object?> original = new Dictionary<string, object?> { ["x-custom"] = "value" };
+        Dictionary<string, object?> next = RetryPolicy.WithIncrementedAttempt(original);
 
         Assert.Equal("value", next["x-custom"]);
         Assert.Equal(1, RetryPolicy.GetAttempt(next));

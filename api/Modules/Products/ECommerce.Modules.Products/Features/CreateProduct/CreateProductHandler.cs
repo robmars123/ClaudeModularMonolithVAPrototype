@@ -30,10 +30,10 @@ public class CreateProductHandler : IRequestHandler<CreateProductCommand, Result
         if (!await _db.Categories.AnyAsync(c => c.Id == cmd.CategoryId && c.IsActive, ct))
             return Result<ProductResponse>.Failure("Category not found.");
 
-        var product = Product.Create(cmd.Name, cmd.Description, cmd.SKU, cmd.Price, cmd.CategoryId, cmd.ImageUrl, cmd.CreatedBy);
+        Product product = Product.Create(cmd.Name, cmd.Description, cmd.SKU, cmd.Price, cmd.CategoryId, cmd.ImageUrl, cmd.CreatedBy);
         _db.Products.Add(product);
 
-        var createdEvent = new ProductCreatedEvent(product.Id, product.SKU, product.Name, cmd.CreatedBy);
+        ProductCreatedEvent createdEvent = new ProductCreatedEvent(product.Id, product.SKU, product.Name, cmd.CreatedBy);
 
         // Pub/sub: broadcast on the topic exchange — every bound subscriber queue gets its own copy.
         // Enqueued into the same change tracker as the product, so it commits atomically with it below.
@@ -45,7 +45,7 @@ public class CreateProductHandler : IRequestHandler<CreateProductCommand, Result
         // already saved, so a failure here is logged for reconciliation instead of failing the request.
         await _publisher.PublishBestEffort(createdEvent, _logger, $"Product {product.SKU} created but notifying Inventory failed", ct);
 
-        var cat = await _db.Categories.FindAsync([cmd.CategoryId], ct);
+        Category? cat = await _db.Categories.FindAsync([cmd.CategoryId], ct);
         return Result<ProductResponse>.Success(new ProductResponse(product.Id, product.Name, product.Description, product.SKU, product.Price, product.ImageUrl, product.IsActive, product.CategoryId, cat!.Name, product.CreatedAt, product.UpdatedAt));
     }
 }

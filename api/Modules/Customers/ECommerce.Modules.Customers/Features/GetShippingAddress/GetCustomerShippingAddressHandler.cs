@@ -1,3 +1,4 @@
+using ECommerce.Modules.Customers.Entities;
 using ECommerce.Modules.Customers.Persistence;
 using ECommerce.Shared.Common;
 using ECommerce.Shared.Contracts.Customers;
@@ -14,7 +15,7 @@ public class GetCustomerShippingAddressHandler : IRequestHandler<GetCustomerShip
 
     public async Task<Result<CustomerShippingAddressDto>> Handle(GetCustomerShippingAddressRequest request, CancellationToken ct)
     {
-        var customer = await _db.Customers.AsNoTracking()
+        Customer? customer = await _db.Customers.AsNoTracking()
             .FirstOrDefaultAsync(c => c.UserId == request.UserId, ct);
 
         if (customer?.ShippingAddress is not { } address)

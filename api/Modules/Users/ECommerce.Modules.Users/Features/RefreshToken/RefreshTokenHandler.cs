@@ -24,8 +24,8 @@ public class RefreshTokenHandler : IRequestHandler<RefreshTokenCommand, Result<A
 
     public async Task<Result<AuthResponse>> Handle(RefreshTokenCommand cmd, CancellationToken ct)
     {
-        var hash = TokenService.Hash(cmd.RefreshTokenValue);
-        var token = await _db.RefreshTokens.FirstOrDefaultAsync(t => t.TokenHash == hash, ct);
+        string hash = TokenService.Hash(cmd.RefreshTokenValue);
+        Entities.RefreshToken? token = await _db.RefreshTokens.FirstOrDefaultAsync(t => t.TokenHash == hash, ct);
 
         if (token is null)
             return Result<AuthResponse>.Failure("Refresh token is invalid or expired. Please log in again.");
@@ -45,7 +45,7 @@ public class RefreshTokenHandler : IRequestHandler<RefreshTokenCommand, Result<A
         // Atomically claim this token for rotation. A plain read-then-write would let two concurrent
         // requests presenting the same still-valid token both "win" — the guarded update means only
         // one can; the loser's write affects zero rows, which is exactly the reuse-detection signal.
-        var claimed = await _db.RefreshTokens
+        int claimed = await _db.RefreshTokens
             .Where(t => t.Id == token.Id && t.RevokedAt == null)
             .ExecuteUpdateAsync(s => s.SetProperty(t => t.RevokedAt, DateTime.UtcNow), ct);
 
@@ -56,12 +56,12 @@ public class RefreshTokenHandler : IRequestHandler<RefreshTokenCommand, Result<A
             return Result<AuthResponse>.Failure("Session revoked. Please log in again.");
         }
 
-        var user = await _users.FindByIdAsync(token.UserId);
+        ApplicationUser? user = await _users.FindByIdAsync(token.UserId);
         if (user is null || !user.IsActive)
             return Result<AuthResponse>.Failure("Refresh token is invalid or expired. Please log in again.");
 
-        var roles = await _users.GetRolesAsync(user);
-        var response = await _issuer.IssueAsync(user, roles, ct);
+        IList<string> roles = await _users.GetRolesAsync(user);
+        AuthResponse response = await _issuer.IssueAsync(user, roles, ct);
 
         return Result<AuthResponse>.Success(response);
     }

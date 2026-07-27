@@ -1,3 +1,5 @@
+using ECommerce.Modules.Users.Features.RegisterUser;
+using ECommerce.Shared.Common;
 using ECommerce.Shared.Mediator;
 using FastEndpoints;
 
@@ -16,7 +18,7 @@ public class Endpoint : Endpoint<RefreshTokenRequest, RegisterUser.AuthResponse>
 
     public override async Task HandleAsync(RefreshTokenRequest req, CancellationToken ct)
     {
-        var result = await _mediator.Send(new RefreshTokenCommand(req.RefreshToken), ct);
+        Result<AuthResponse> result = await _mediator.Send(new RefreshTokenCommand(req.RefreshToken), ct);
         if (!result.IsSuccess) { await HttpContext.Response.SendAsync(new { errors = result.Errors }, 401, cancellation: ct); return; }
         await Send.OkAsync(result.Value!, ct);
     }

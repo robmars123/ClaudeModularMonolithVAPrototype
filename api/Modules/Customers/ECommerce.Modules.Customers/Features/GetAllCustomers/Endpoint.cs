@@ -17,7 +17,7 @@ public class Endpoint : Endpoint<GetAllCustomersRequest, PagedResult<CustomerLis
 
     public override async Task HandleAsync(GetAllCustomersRequest req, CancellationToken ct)
     {
-        var result = await _mediator.Send(new GetAllCustomersQuery(req.Page, req.PageSize), ct);
+        Result<PagedResult<CustomerListResponse>> result = await _mediator.Send(new GetAllCustomersQuery(req.Page, req.PageSize), ct);
         await Send.OkAsync(result.Value!, ct);
     }
 }

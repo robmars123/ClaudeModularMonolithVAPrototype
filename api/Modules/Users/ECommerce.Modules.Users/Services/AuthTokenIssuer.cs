@@ -12,8 +12,8 @@ public sealed class AuthTokenIssuer(TokenService tokens, UsersDbContext db)
 {
     public async Task<AuthResponse> IssueAsync(ApplicationUser user, IList<string> roles, CancellationToken ct)
     {
-        var accessToken = tokens.GenerateAccessToken(user, roles);
-        var (rawRefreshToken, refreshTokenHash) = tokens.GenerateRefreshToken();
+        string accessToken = tokens.GenerateAccessToken(user, roles);
+        (string? rawRefreshToken, string? refreshTokenHash) = tokens.GenerateRefreshToken();
 
         db.RefreshTokens.Add(RefreshToken.Create(user.Id, refreshTokenHash, DateTime.UtcNow.AddDays(tokens.RefreshTokenExpiryDays)));
         await db.SaveChangesAsync(ct);

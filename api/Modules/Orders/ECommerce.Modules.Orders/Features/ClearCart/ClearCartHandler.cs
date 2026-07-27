@@ -1,3 +1,4 @@
+using ECommerce.Modules.Orders.Entities;
 using ECommerce.Modules.Orders.Persistence;
 using ECommerce.Shared.Common;
 using ECommerce.Shared.Mediator;
@@ -12,7 +13,7 @@ public class ClearCartHandler : IRequestHandler<ClearCartCommand, Result>
 
     public async Task<Result> Handle(ClearCartCommand cmd, CancellationToken ct)
     {
-        var cart = await _db.Carts
+        Cart? cart = await _db.Carts
             .Include(c => c.Items)
             .FirstOrDefaultAsync(c => c.UserId == cmd.UserId && c.Status == "Active", ct);
 

@@ -1,4 +1,6 @@
+using ECommerce.Modules.Inventory.Entities;
 using ECommerce.Modules.Inventory.Persistence;
+using ECommerce.Shared.Contracts.Inventory;
 using ECommerce.Shared.IntegrationEvents;
 using ECommerce.Shared.Mediator;
 using Microsoft.EntityFrameworkCore;
@@ -20,9 +22,9 @@ public class OrderPlacedHandler : INotificationHandler<OrderPlacedEvent>
 
     public async Task Handle(OrderPlacedEvent notification, CancellationToken ct)
     {
-        foreach (var line in notification.Lines)
+        foreach (StockLine line in notification.Lines)
         {
-            var item = await _db.InventoryItems
+            InventoryItem? item = await _db.InventoryItems
                 .FirstOrDefaultAsync(i => i.ProductId == line.ProductId, ct);
 
             if (item is null)

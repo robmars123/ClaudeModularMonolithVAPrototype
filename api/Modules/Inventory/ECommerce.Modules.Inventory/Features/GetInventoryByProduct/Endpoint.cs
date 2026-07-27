@@ -1,4 +1,5 @@
 using ECommerce.Modules.Inventory.Features.GetInventory;
+using ECommerce.Shared.Common;
 using ECommerce.Shared.Mediator;
 using FastEndpoints;
 
@@ -17,7 +18,7 @@ public class Endpoint : Endpoint<GetInventoryByProductRequest, InventoryResponse
 
     public override async Task HandleAsync(GetInventoryByProductRequest req, CancellationToken ct)
     {
-        var result = await _mediator.Send(new GetInventoryByProductQuery(req.ProductId), ct);
+        Result<InventoryResponse> result = await _mediator.Send(new GetInventoryByProductQuery(req.ProductId), ct);
         if (!result.IsSuccess) { await HttpContext.Response.SendAsync(new { error = result.Error }, 404, cancellation: ct); return; }
         await Send.OkAsync(result.Value!, ct);
     }

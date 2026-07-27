@@ -13,13 +13,13 @@ public sealed class ProductsSqliteTestDatabase : IDisposable
         _connection = new SqliteConnection("DataSource=:memory:");
         _connection.Open();
 
-        using var context = CreateContext();
+        using ProductsDbContext context = CreateContext();
         context.Database.EnsureCreated();
     }
 
     public ProductsDbContext CreateContext()
     {
-        var options = new DbContextOptionsBuilder<ProductsDbContext>().UseSqlite(_connection).Options;
+        DbContextOptions<ProductsDbContext> options = new DbContextOptionsBuilder<ProductsDbContext>().UseSqlite(_connection).Options;
         return new ProductsDbContext(options);
     }
 

@@ -1,3 +1,4 @@
+using ECommerce.Modules.Inventory.Entities;
 using ECommerce.Modules.Inventory.Features.GetInventory;
 using ECommerce.Modules.Inventory.Persistence;
 using ECommerce.Shared.Common;
@@ -13,7 +14,7 @@ public class GetInventoryByProductHandler : IRequestHandler<GetInventoryByProduc
 
     public async Task<Result<InventoryResponse>> Handle(GetInventoryByProductQuery q, CancellationToken ct)
     {
-        var item = await _db.InventoryItems.AsNoTracking().FirstOrDefaultAsync(i => i.ProductId == q.ProductId, ct);
+        InventoryItem? item = await _db.InventoryItems.AsNoTracking().FirstOrDefaultAsync(i => i.ProductId == q.ProductId, ct);
         if (item is null) return Result<InventoryResponse>.Failure("Inventory record not found.");
         return Result<InventoryResponse>.Success(new InventoryResponse(item.Id, item.ProductId, item.QuantityOnHand, item.ReservedQuantity, item.AvailableQuantity, item.ReorderLevel, item.ReorderQuantity, item.NeedsReorder, item.CreatedAt, item.UpdatedAt));
     }

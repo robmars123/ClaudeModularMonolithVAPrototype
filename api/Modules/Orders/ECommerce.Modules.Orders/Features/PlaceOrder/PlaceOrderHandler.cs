@@ -26,24 +26,24 @@ public class PlaceOrderHandler : IRequestHandler<PlaceOrderCommand, Result<Order
 
     public async Task<Result<OrderResponse>> Handle(PlaceOrderCommand cmd, CancellationToken ct)
     {
-        var lease = _idempotency.TryAcquire(cmd.UserId);
+        Guid? lease = _idempotency.TryAcquire(cmd.UserId);
         if (lease is null)
             return Result<OrderResponse>.Failure("A request to place this order is already in progress. Please wait a moment and try again.");
 
         try
         {
-            var cart = await _db.Carts
+            Cart? cart = await _db.Carts
                 .Include(c => c.Items)
                 .FirstOrDefaultAsync(c => c.UserId == cmd.UserId && c.Status == "Active", ct);
 
             if (cart is null || cart.Items.Count == 0)
                 return Result<OrderResponse>.Failure("Cart is empty.");
 
-            var addressResult = await ResolveShippingAddressAsync(cmd, ct);
+            Result<string> addressResult = await ResolveShippingAddressAsync(cmd, ct);
             if (!addressResult.IsSuccess)
                 return Result<OrderResponse>.Failure(addressResult.Error!);
 
-            var availabilityCheck = await CheckAvailabilityAsync(cart, ct);
+            Result availabilityCheck = await CheckAvailabilityAsync(cart, ct);
             if (!availabilityCheck.IsSuccess)
                 return Result<OrderResponse>.Failure(availabilityCheck.Error!);
 
@@ -61,7 +61,7 @@ public class PlaceOrderHandler : IRequestHandler<PlaceOrderCommand, Result<Order
         if (!string.IsNullOrWhiteSpace(cmd.ShippingAddress))
             return Result<string>.Success(cmd.ShippingAddress);
 
-        var addressResult = await _mediator.Send(new GetCustomerShippingAddressRequest(cmd.UserId), ct);
+        Result<CustomerShippingAddressDto> addressResult = await _mediator.Send(new GetCustomerShippingAddressRequest(cmd.UserId), ct);
         return addressResult.IsSuccess
             ? Result<string>.Success(addressResult.Value!.ToString())
             : Result<string>.Failure("No shipping address provided and none on file. Update your profile or supply an address.");
@@ -70,10 +70,10 @@ public class PlaceOrderHandler : IRequestHandler<PlaceOrderCommand, Result<Order
     // Friendly per-item availability check — the atomic reservation below is what actually guards against concurrent checkouts.
     private async Task<Result> CheckAvailabilityAsync(Cart cart, CancellationToken ct)
     {
-        foreach (var item in cart.Items)
+        foreach (CartItem item in cart.Items)
         {
-            var availability = await _mediator.Send(new GetStockAvailabilityRequest(item.ProductId), ct);
-            var available = availability.IsSuccess ? availability.Value : 0;
+            Result<int> availability = await _mediator.Send(new GetStockAvailabilityRequest(item.ProductId), ct);
+            int available = availability.IsSuccess ? availability.Value : 0;
             if (available < item.Quantity)
                 return Result.Failure($"Insufficient stock for '{item.ProductName}' — {available} available.");
         }
@@ -83,12 +83,12 @@ public class PlaceOrderHandler : IRequestHandler<PlaceOrderCommand, Result<Order
 
     private async Task<Result<OrderResponse>> ReserveAndPersistOrderAsync(PlaceOrderCommand cmd, Cart cart, string shippingAddress, CancellationToken ct)
     {
-        var lines = cart.Items.Select(i => new StockLine(i.ProductId, i.Quantity)).ToList();
-        var reservation = await _mediator.Send(new ReserveStockRequest(lines), ct);
+        List<StockLine> lines = cart.Items.Select(i => new StockLine(i.ProductId, i.Quantity)).ToList();
+        Result reservation = await _mediator.Send(new ReserveStockRequest(lines), ct);
         if (!reservation.IsSuccess)
             return Result<OrderResponse>.Failure("Stock levels changed while placing your order. Please try again.");
 
-        var order = Order.Create(cmd.UserId, cart.Items, shippingAddress, cmd.Notes);
+        Order order = Order.Create(cmd.UserId, cart.Items, shippingAddress, cmd.Notes);
         _db.Orders.Add(order);
         cart.Clear();
 
@@ -99,7 +99,7 @@ public class PlaceOrderHandler : IRequestHandler<PlaceOrderCommand, Result<Order
         string? customerName = null;
         try
         {
-            var contact = await _mediator.Send(new GetCustomerContactRequest(cmd.UserId), ct);
+            Result<CustomerContactDto> contact = await _mediator.Send(new GetCustomerContactRequest(cmd.UserId), ct);
             if (contact.IsSuccess)
             {
                 customerEmail = contact.Value!.Email;
@@ -111,7 +111,7 @@ public class PlaceOrderHandler : IRequestHandler<PlaceOrderCommand, Result<Order
             _logger.LogWarning(ex, "Could not resolve customer contact for order notification; proceeding without it.");
         }
 
-        var placedEvent = new OrderPlacedEvent(order.Id, order.OrderNumber, cmd.UserId, lines)
+        OrderPlacedEvent placedEvent = new OrderPlacedEvent(order.Id, order.OrderNumber, cmd.UserId, lines)
         {
             CustomerEmail = customerEmail,
             CustomerName = customerName,

@@ -7,7 +7,7 @@ public sealed class JwtOptionsValidator : IValidateOptions<JwtOptions>
 {
     public ValidateOptionsResult Validate(string? name, JwtOptions options)
     {
-        var errors = new List<string>();
+        List<string> errors = new List<string>();
 
         if (string.IsNullOrWhiteSpace(options.Secret) || options.Secret.Length < 32)
             errors.Add($"{JwtOptions.SectionName}:Secret must be at least 32 characters.");

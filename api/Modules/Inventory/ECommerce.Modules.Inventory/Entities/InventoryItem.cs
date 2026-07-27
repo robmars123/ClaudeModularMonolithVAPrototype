@@ -17,7 +17,7 @@ public class InventoryItem : AuditableEntity
 
     public static InventoryItem Create(Guid productId, int quantity, int reorderLevel, int reorderQuantity, string createdBy)
     {
-        var i = new InventoryItem { ProductId = productId, QuantityOnHand = quantity, ReorderLevel = reorderLevel, ReorderQuantity = reorderQuantity };
+        InventoryItem i = new InventoryItem { ProductId = productId, QuantityOnHand = quantity, ReorderLevel = reorderLevel, ReorderQuantity = reorderQuantity };
         i.SetCreatedBy(createdBy);
         return i;
     }

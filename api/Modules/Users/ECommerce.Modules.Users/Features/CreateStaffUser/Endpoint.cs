@@ -1,3 +1,4 @@
+using ECommerce.Shared.Common;
 using ECommerce.Shared.Mediator;
 using FastEndpoints;
 
@@ -16,7 +17,7 @@ public class Endpoint : Endpoint<CreateStaffUserRequest, StaffUserResponse>
 
     public override async Task HandleAsync(CreateStaffUserRequest req, CancellationToken ct)
     {
-        var result = await _mediator.Send(new CreateStaffUserCommand(req.FirstName, req.LastName, req.Email, req.Password, req.Role), ct);
+        Result<StaffUserResponse> result = await _mediator.Send(new CreateStaffUserCommand(req.FirstName, req.LastName, req.Email, req.Password, req.Role), ct);
         if (!result.IsSuccess) { await HttpContext.Response.SendAsync(new { errors = result.Errors }, 400, cancellation: ct); return; }
         await Send.OkAsync(result.Value!, ct);
     }

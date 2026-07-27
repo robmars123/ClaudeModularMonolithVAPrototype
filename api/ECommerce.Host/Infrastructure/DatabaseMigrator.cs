@@ -17,9 +17,9 @@ public static class DatabaseMigrator
 {
     public static async Task MigrateAndSeedAsync(WebApplication app)
     {
-        using var scope = app.Services.CreateScope();
-        var services = scope.ServiceProvider;
-        var logger = services.GetRequiredService<ILogger<Program>>();
+        using IServiceScope scope = app.Services.CreateScope();
+        IServiceProvider services = scope.ServiceProvider;
+        ILogger<Program> logger = services.GetRequiredService<ILogger<Program>>();
 
         try
         {
@@ -46,9 +46,9 @@ public static class DatabaseMigrator
 
     private static async Task SeedRolesAsync(IServiceProvider services, ILogger logger)
     {
-        var roleManager = services.GetRequiredService<RoleManager<IdentityRole>>();
+        RoleManager<IdentityRole> roleManager = services.GetRequiredService<RoleManager<IdentityRole>>();
 
-        foreach (var role in Roles.All)
+        foreach (string role in Roles.All)
         {
             if (!await roleManager.RoleExistsAsync(role))
             {
@@ -60,13 +60,13 @@ public static class DatabaseMigrator
 
     private static async Task SeedAdminUserAsync(IServiceProvider services, ILogger logger, IConfiguration config)
     {
-        var userManager = services.GetRequiredService<UserManager<ApplicationUser>>();
-        var adminEmail = config["Seed:AdminEmail"] ?? "admin@ecommerce.com";
+        UserManager<ApplicationUser> userManager = services.GetRequiredService<UserManager<ApplicationUser>>();
+        string adminEmail = config["Seed:AdminEmail"] ?? "admin@ecommerce.com";
 
         if (await userManager.FindByEmailAsync(adminEmail) is not null)
             return;
 
-        var admin = new ApplicationUser
+        ApplicationUser admin = new ApplicationUser
         {
             FirstName = "System",
             LastName = "Admin",
@@ -75,8 +75,8 @@ public static class DatabaseMigrator
             EmailConfirmed = true
         };
 
-        var adminPassword = config["Seed:AdminPassword"] ?? "Admin@123456";
-        var result = await userManager.CreateAsync(admin, adminPassword);
+        string adminPassword = config["Seed:AdminPassword"] ?? "Admin@123456";
+        IdentityResult result = await userManager.CreateAsync(admin, adminPassword);
         if (result.Succeeded)
         {
             await userManager.AddToRoleAsync(admin, Roles.Admin);
@@ -86,22 +86,22 @@ public static class DatabaseMigrator
 
     private static async Task SeedSampleDataAsync(IServiceProvider services, ILogger logger)
     {
-        var productsContext = services.GetRequiredService<ProductsDbContext>();
-        var inventoryContext = services.GetRequiredService<InventoryDbContext>();
+        ProductsDbContext productsContext = services.GetRequiredService<ProductsDbContext>();
+        InventoryDbContext inventoryContext = services.GetRequiredService<InventoryDbContext>();
 
         if (await productsContext.Categories.AnyAsync())
             return;
 
         logger.LogInformation("Seeding sample products and inventory...");
 
-        var electronics = Category.Create("Electronics", "Electronic devices and accessories", "system");
-        var clothing = Category.Create("Clothing", "Apparel and fashion", "system");
-        var books = Category.Create("Books", "Books and publications", "system");
+        Category electronics = Category.Create("Electronics", "Electronic devices and accessories", "system");
+        Category clothing = Category.Create("Clothing", "Apparel and fashion", "system");
+        Category books = Category.Create("Books", "Books and publications", "system");
 
         productsContext.Categories.AddRange(electronics, clothing, books);
         await productsContext.SaveChangesAsync();
 
-        var products = new[]
+        Product[] products = new[]
         {
             Product.Create("Wireless Headphones", "Premium noise-cancelling wireless headphones", "WH-001", 149.99m, electronics.Id, null, "system"),
             Product.Create("Mechanical Keyboard", "RGB mechanical gaming keyboard", "KB-001", 89.99m, electronics.Id, null, "system"),
@@ -112,7 +112,7 @@ public static class DatabaseMigrator
         productsContext.Products.AddRange(products);
         await productsContext.SaveChangesAsync();
 
-        var inventoryItems = products.Select(p =>
+        IEnumerable<InventoryItem> inventoryItems = products.Select(p =>
             InventoryItem.Create(p.Id, 100, 10, 50, "system"));
 
         inventoryContext.InventoryItems.AddRange(inventoryItems);

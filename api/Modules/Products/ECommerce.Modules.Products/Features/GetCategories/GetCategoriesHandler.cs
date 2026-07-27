@@ -13,7 +13,7 @@ public class GetCategoriesHandler : IRequestHandler<GetCategoriesQuery, Result<I
 
     public async Task<Result<IReadOnlyList<CategoryResponse>>> Handle(GetCategoriesQuery q, CancellationToken ct)
     {
-        var categories = await _db.Categories.Where(c => c.IsActive).AsNoTracking()
+        List<CategoryResponse> categories = await _db.Categories.Where(c => c.IsActive).AsNoTracking()
             .Select(c => new CategoryResponse(c.Id, c.Name, c.Description, c.IsActive))
             .ToListAsync(ct);
         return Result<IReadOnlyList<CategoryResponse>>.Success(categories);

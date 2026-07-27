@@ -13,7 +13,7 @@ public class Endpoint : EndpointWithoutRequest
 
     public override async Task HandleAsync(CancellationToken ct)
     {
-        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+        string userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
         await _mediator.Send(new ClearCartCommand(userId), ct);
         await Send.NoContentAsync(ct);
     }

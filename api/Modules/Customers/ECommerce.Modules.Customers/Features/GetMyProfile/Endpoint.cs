@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using ECommerce.Shared.Common;
 using ECommerce.Shared.Mediator;
 using FastEndpoints;
 
@@ -13,8 +14,8 @@ public class Endpoint : EndpointWithoutRequest<CustomerResponse>
 
     public override async Task HandleAsync(CancellationToken ct)
     {
-        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
-        var result = await _mediator.Send(new GetMyProfileQuery(userId), ct);
+        string userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+        Result<CustomerResponse> result = await _mediator.Send(new GetMyProfileQuery(userId), ct);
         if (!result.IsSuccess) { await HttpContext.Response.SendAsync(new { error = result.Error }, 404, cancellation: ct); return; }
         await Send.OkAsync(result.Value!, ct);
     }

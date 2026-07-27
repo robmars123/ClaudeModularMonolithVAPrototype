@@ -17,7 +17,7 @@ public class Endpoint : Endpoint<GetInventoryRequest, PagedResult<InventoryRespo
 
     public override async Task HandleAsync(GetInventoryRequest req, CancellationToken ct)
     {
-        var result = await _mediator.Send(new GetInventoryQuery(req.Page, req.PageSize, req.LowStockOnly), ct);
+        Result<PagedResult<InventoryResponse>> result = await _mediator.Send(new GetInventoryQuery(req.Page, req.PageSize, req.LowStockOnly), ct);
         await Send.OkAsync(result.Value!, ct);
     }
 }

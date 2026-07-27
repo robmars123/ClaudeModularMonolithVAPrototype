@@ -1,3 +1,4 @@
+using ECommerce.Modules.Inventory.Entities;
 using ECommerce.Modules.Inventory.Persistence;
 using ECommerce.Shared.Common;
 using ECommerce.Shared.Contracts.Inventory;
@@ -14,7 +15,7 @@ public class GetStockAvailabilityHandler : IRequestHandler<GetStockAvailabilityR
 
     public async Task<Result<int>> Handle(GetStockAvailabilityRequest request, CancellationToken ct)
     {
-        var item = await _db.InventoryItems.AsNoTracking()
+        InventoryItem? item = await _db.InventoryItems.AsNoTracking()
             .FirstOrDefaultAsync(i => i.ProductId == request.ProductId, ct);
 
         return Result<int>.Success(item?.AvailableQuantity ?? 0);

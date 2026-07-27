@@ -27,7 +27,7 @@ public class ProductCreatedHandler : INotificationHandler<ProductCreatedEvent>
         if (await _db.InventoryItems.AnyAsync(i => i.ProductId == notification.ProductId, ct))
             return;
 
-        var item = InventoryItem.Create(notification.ProductId, 0, DefaultReorderLevel, DefaultReorderQuantity, notification.CreatedBy);
+        InventoryItem item = InventoryItem.Create(notification.ProductId, 0, DefaultReorderLevel, DefaultReorderQuantity, notification.CreatedBy);
         _db.InventoryItems.Add(item);
         await _db.SaveChangesAsync(ct);
 

@@ -17,7 +17,7 @@ public class Cart : BaseEntity
 
     public static Cart Create(string userId)
     {
-        var cart = new Cart
+        Cart cart = new Cart
         {
             Id = Guid.NewGuid(),
             UserId = userId,
@@ -30,7 +30,7 @@ public class Cart : BaseEntity
 
     public void AddItem(Guid productId, string productName, decimal unitPrice, int quantity)
     {
-        var existing = _items.FirstOrDefault(i => i.ProductId == productId);
+        CartItem? existing = _items.FirstOrDefault(i => i.ProductId == productId);
         if (existing is not null)
         {
             existing.UpdateQuantity(existing.Quantity + quantity);
@@ -44,7 +44,7 @@ public class Cart : BaseEntity
 
     public void RemoveItem(Guid productId)
     {
-        var item = _items.FirstOrDefault(i => i.ProductId == productId);
+        CartItem? item = _items.FirstOrDefault(i => i.ProductId == productId);
         if (item is not null)
         {
             _items.Remove(item);
@@ -54,7 +54,7 @@ public class Cart : BaseEntity
 
     public void UpdateItemQuantity(Guid productId, int quantity)
     {
-        var item = _items.FirstOrDefault(i => i.ProductId == productId);
+        CartItem? item = _items.FirstOrDefault(i => i.ProductId == productId);
         if (item is not null)
         {
             item.UpdateQuantity(quantity);

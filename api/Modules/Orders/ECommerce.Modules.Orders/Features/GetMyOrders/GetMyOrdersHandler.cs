@@ -1,3 +1,4 @@
+using ECommerce.Modules.Orders.Entities;
 using ECommerce.Modules.Orders.Features.PlaceOrder;
 using ECommerce.Modules.Orders.Persistence;
 using ECommerce.Shared.Common;
@@ -13,14 +14,14 @@ public class GetMyOrdersHandler : IRequestHandler<GetMyOrdersQuery, Result<IRead
 
     public async Task<Result<IReadOnlyList<OrderResponse>>> Handle(GetMyOrdersQuery q, CancellationToken ct)
     {
-        var orders = await _db.Orders
+        List<Order> orders = await _db.Orders
             .Include(o => o.Items)
             .AsNoTracking()
             .Where(o => o.UserId == q.UserId)
             .OrderByDescending(o => o.CreatedAt)
             .ToListAsync(ct);
 
-        var result = orders.Select(OrderResponse.FromEntity).ToList();
+        List<OrderResponse> result = orders.Select(OrderResponse.FromEntity).ToList();
 
         return Result<IReadOnlyList<OrderResponse>>.Success(result);
     }

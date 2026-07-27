@@ -13,7 +13,7 @@ public class UpdateShippingAddressHandler : IRequestHandler<UpdateShippingAddres
 
     public async Task<Result> Handle(UpdateShippingAddressCommand cmd, CancellationToken ct)
     {
-        var customer = await _db.Customers.FirstOrDefaultAsync(c => c.UserId == cmd.UserId, ct);
+        Customer? customer = await _db.Customers.FirstOrDefaultAsync(c => c.UserId == cmd.UserId, ct);
         if (customer is null) return Result.Failure("Customer not found.");
 
         customer.UpdateShippingAddress(new Address(cmd.Street, cmd.City, cmd.State, cmd.ZipCode, cmd.Country), cmd.UserId);

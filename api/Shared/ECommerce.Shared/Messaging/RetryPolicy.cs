@@ -13,21 +13,21 @@ public static class RetryPolicy
 
     public static int GetAttempt(IDictionary<string, object?>? headers)
     {
-        if (headers is null || !headers.TryGetValue(AttemptHeaderKey, out var value) || value is null)
+        if (headers is null || !headers.TryGetValue(AttemptHeaderKey, out object? value) || value is null)
             return 0;
 
         return value switch
         {
             int i => i,
             long l => (int)l,
-            byte[] bytes => int.TryParse(Encoding.UTF8.GetString(bytes), out var parsed) ? parsed : 0,
+            byte[] bytes => int.TryParse(Encoding.UTF8.GetString(bytes), out int parsed) ? parsed : 0,
             _ => 0
         };
     }
 
     public static Dictionary<string, object?> WithIncrementedAttempt(IDictionary<string, object?>? headers)
     {
-        var next = headers is null
+        Dictionary<string, object?> next = headers is null
             ? new Dictionary<string, object?>()
             : new Dictionary<string, object?>(headers);
 

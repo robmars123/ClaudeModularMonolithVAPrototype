@@ -34,7 +34,7 @@ public sealed class ProductsEndpointIntegrationTests : IAsyncLifetime
         _connection = new SqliteConnection("DataSource=:memory:");
         _connection.Open();
 
-        var builder = WebApplication.CreateBuilder();
+        WebApplicationBuilder builder = WebApplication.CreateBuilder();
         builder.WebHost.UseTestServer();
 
         builder.Services.AddDbContext<ProductsDbContext>(o => o.UseSqlite(_connection));
@@ -46,7 +46,7 @@ public sealed class ProductsEndpointIntegrationTests : IAsyncLifetime
 
         await _app.StartAsync();
 
-        using (var scope = _app.Services.CreateScope())
+        using (IServiceScope scope = _app.Services.CreateScope())
             await scope.ServiceProvider.GetRequiredService<ProductsDbContext>().Database.EnsureCreatedAsync();
 
         _client = _app.GetTestClient();
@@ -62,19 +62,19 @@ public sealed class ProductsEndpointIntegrationTests : IAsyncLifetime
     [Fact]
     public async Task GET_products_returns_a_seeded_product_through_the_full_http_to_db_pipeline()
     {
-        using (var scope = _app.Services.CreateScope())
+        using (IServiceScope scope = _app.Services.CreateScope())
         {
-            var db = scope.ServiceProvider.GetRequiredService<ProductsDbContext>();
-            var category = Category.Create("Electronics", null, "system");
+            ProductsDbContext db = scope.ServiceProvider.GetRequiredService<ProductsDbContext>();
+            Category category = Category.Create("Electronics", null, "system");
             db.Categories.Add(category);
             db.Products.Add(Product.Create("Widget", "A widget", "WID-001", 19.99m, category.Id, null, "system"));
             await db.SaveChangesAsync();
         }
 
-        var response = await _client.GetAsync("/api/products?page=1&pageSize=20");
+        HttpResponseMessage response = await _client.GetAsync("/api/products?page=1&pageSize=20");
         response.EnsureSuccessStatusCode();
 
-        var body = await response.Content.ReadFromJsonAsync<PagedResult<ProductResponse>>(JsonOptions);
+        PagedResult<ProductResponse>? body = await response.Content.ReadFromJsonAsync<PagedResult<ProductResponse>>(JsonOptions);
 
         Assert.NotNull(body);
         Assert.Single(body!.Items);
@@ -85,10 +85,10 @@ public sealed class ProductsEndpointIntegrationTests : IAsyncLifetime
     [Fact]
     public async Task GET_products_returns_an_empty_page_when_nothing_is_seeded()
     {
-        var response = await _client.GetAsync("/api/products?page=1&pageSize=20");
+        HttpResponseMessage response = await _client.GetAsync("/api/products?page=1&pageSize=20");
         response.EnsureSuccessStatusCode();
 
-        var body = await response.Content.ReadFromJsonAsync<PagedResult<ProductResponse>>(JsonOptions);
+        PagedResult<ProductResponse>? body = await response.Content.ReadFromJsonAsync<PagedResult<ProductResponse>>(JsonOptions);
 
         Assert.NotNull(body);
         Assert.Empty(body!.Items);

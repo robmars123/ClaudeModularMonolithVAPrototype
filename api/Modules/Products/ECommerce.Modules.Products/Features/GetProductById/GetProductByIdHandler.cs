@@ -1,3 +1,4 @@
+using ECommerce.Modules.Products.Entities;
 using ECommerce.Modules.Products.Features.GetProducts;
 using ECommerce.Modules.Products.Persistence;
 using ECommerce.Shared.Common;
@@ -13,7 +14,7 @@ public class GetProductByIdHandler : IRequestHandler<GetProductByIdQuery, Result
 
     public async Task<Result<ProductResponse>> Handle(GetProductByIdQuery q, CancellationToken ct)
     {
-        var p = await _db.Products.Include(x => x.Category).AsNoTracking()
+        Product? p = await _db.Products.Include(x => x.Category).AsNoTracking()
             .FirstOrDefaultAsync(x => x.Id == q.ProductId, ct);
 
         if (p is null) return Result<ProductResponse>.Failure("Product not found.");

@@ -13,8 +13,8 @@ public class LogoutHandler : IRequestHandler<LogoutCommand, Result>
 
     public async Task<Result> Handle(LogoutCommand cmd, CancellationToken ct)
     {
-        var hash = TokenService.Hash(cmd.RefreshTokenValue);
-        var token = await _db.RefreshTokens.FirstOrDefaultAsync(t => t.TokenHash == hash, ct);
+        string hash = TokenService.Hash(cmd.RefreshTokenValue);
+        Entities.RefreshToken? token = await _db.RefreshTokens.FirstOrDefaultAsync(t => t.TokenHash == hash, ct);
 
         // Idempotent: an already-revoked/unknown token still "succeeds" from the caller's perspective —
         // the outcome they want (session dead) already holds.

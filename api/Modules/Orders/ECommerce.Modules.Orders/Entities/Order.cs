@@ -21,8 +21,8 @@ public class Order : AuditableEntity
 
     public static Order Create(string userId, IEnumerable<CartItem> cartItems, string? shippingAddress, string? notes)
     {
-        var items = cartItems.ToList();
-        var order = new Order
+        List<CartItem> items = cartItems.ToList();
+        Order order = new Order
         {
             Id = Guid.NewGuid(),
             UserId = userId,
@@ -34,7 +34,7 @@ public class Order : AuditableEntity
         };
         order.SetCreatedBy(userId);
 
-        foreach (var cartItem in items)
+        foreach (CartItem? cartItem in items)
             order._items.Add(OrderItem.Create(order.Id, cartItem.ProductId, cartItem.ProductName, cartItem.UnitPrice, cartItem.Quantity));
 
         return order;

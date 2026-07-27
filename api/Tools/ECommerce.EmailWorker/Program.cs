@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
-var builder = Host.CreateApplicationBuilder(args);
+HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
 
 builder.Services.Configure<RabbitMqOptions>(builder.Configuration.GetSection(RabbitMqOptions.SectionName));
 builder.Services.AddSingleton<IRabbitMqConnectionProvider, RabbitMqConnectionProvider>();
@@ -18,9 +18,9 @@ builder.Services.AddScoped<IInboxStore, EfInboxStore<EmailWorkerDbContext>>();
 builder.Services.AddHostedService<EmailNotificationConsumer>();
 builder.Services.AddHostedService<OrderConfirmationConsumer>();
 
-var host = builder.Build();
+IHost host = builder.Build();
 
-using (var scope = host.Services.CreateScope())
+using (IServiceScope scope = host.Services.CreateScope())
     await scope.ServiceProvider.GetRequiredService<EmailWorkerDbContext>().Database.MigrateAsync();
 
 await host.RunAsync();

@@ -13,7 +13,7 @@ public sealed class RabbitMqConnectionProvider(IOptions<RabbitMqOptions> options
 
     public async Task<IChannel?> GetChannelAsync(CancellationToken ct = default)
     {
-        var connection = await GetConnectionAsync(ct).ConfigureAwait(false);
+        IConnection? connection = await GetConnectionAsync(ct).ConfigureAwait(false);
         if (connection is null)
             return null;
 
@@ -39,7 +39,7 @@ public sealed class RabbitMqConnectionProvider(IOptions<RabbitMqOptions> options
             if (_connection is { IsOpen: true })
                 return _connection;
 
-            var factory = new ConnectionFactory
+            ConnectionFactory factory = new ConnectionFactory
             {
                 HostName = _options.HostName,
                 Port = _options.Port,

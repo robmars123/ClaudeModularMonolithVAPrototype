@@ -1,3 +1,4 @@
+using ECommerce.Modules.Orders.Entities;
 using ECommerce.Modules.Orders.Features.PlaceOrder;
 using ECommerce.Modules.Orders.Persistence;
 using ECommerce.Shared.Common;
@@ -13,7 +14,7 @@ public class GetOrderByIdHandler : IRequestHandler<GetOrderByIdQuery, Result<Ord
 
     public async Task<Result<OrderResponse>> Handle(GetOrderByIdQuery q, CancellationToken ct)
     {
-        var order = await _db.Orders
+        Order? order = await _db.Orders
             .Include(o => o.Items)
             .AsNoTracking()
             .FirstOrDefaultAsync(o => o.Id == q.OrderId, ct);

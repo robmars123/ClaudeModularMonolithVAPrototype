@@ -6,6 +6,7 @@ using ECommerce.Shared.IntegrationEvents;
 using ECommerce.Shared.Mediator;
 using ECommerce.Shared.Messaging;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.Logging;
 
 namespace ECommerce.Modules.Users.Features.RegisterUser;
@@ -27,18 +28,18 @@ public class RegisterUserHandler : IRequestHandler<RegisterUserCommand, Result<A
 
     public async Task<Result<AuthResponse>> Handle(RegisterUserCommand cmd, CancellationToken ct)
     {
-        var creation = await CreateIdentityUserAsync(cmd, ct);
+        Result<(ApplicationUser User, UserRegisteredEvent Event)> creation = await CreateIdentityUserAsync(cmd, ct);
         if (!creation.IsSuccess)
             return Result<AuthResponse>.Failure(creation.Errors);
 
-        var (user, registeredEvent) = creation.Value!;
+        (ApplicationUser? user, UserRegisteredEvent? registeredEvent) = creation.Value!;
 
         // Notify other modules (Customers creates the profile for this user). The user is already
         // saved, so a failure here is logged for reconciliation instead of failing the request.
         await _publisher.PublishBestEffort(registeredEvent, _logger, $"User {user.Email} registered but notifying Customers failed", ct);
 
-        var roles = await _users.GetRolesAsync(user);
-        var response = await _issuer.IssueAsync(user, roles, ct);
+        IList<string> roles = await _users.GetRolesAsync(user);
+        AuthResponse response = await _issuer.IssueAsync(user, roles, ct);
         return Result<AuthResponse>.Success(response);
     }
 
@@ -47,15 +48,15 @@ public class RegisterUserHandler : IRequestHandler<RegisterUserCommand, Result<A
         if (await _users.FindByEmailAsync(cmd.Email) is not null)
             return Result<(ApplicationUser, UserRegisteredEvent)>.Failure("Email already registered.");
 
-        var user = new ApplicationUser { FirstName = cmd.FirstName, LastName = cmd.LastName, Email = cmd.Email, UserName = cmd.Email };
-        var registeredEvent = new UserRegisteredEvent(user.Id, user.Email!, user.FirstName, user.LastName);
+        ApplicationUser user = new ApplicationUser { FirstName = cmd.FirstName, LastName = cmd.LastName, Email = cmd.Email, UserName = cmd.Email };
+        UserRegisteredEvent registeredEvent = new UserRegisteredEvent(user.Id, user.Email!, user.FirstName, user.LastName);
 
         // UserManager.CreateAsync/AddToRoleAsync each call SaveChangesAsync internally against this
         // same UsersDbContext instance — wrapping them in an explicit transaction makes those saves
         // and the outbox row below commit (or roll back) together instead of independently.
-        await using var transaction = await _db.Database.BeginTransactionAsync(ct);
+        await using IDbContextTransaction transaction = await _db.Database.BeginTransactionAsync(ct);
 
-        var identityResult = await _users.CreateAsync(user, cmd.Password);
+        IdentityResult identityResult = await _users.CreateAsync(user, cmd.Password);
         if (!identityResult.Succeeded)
         {
             await transaction.RollbackAsync(ct);

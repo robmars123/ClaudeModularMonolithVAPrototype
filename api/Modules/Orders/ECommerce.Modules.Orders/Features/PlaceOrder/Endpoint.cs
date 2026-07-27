@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using ECommerce.Shared.Common;
 using ECommerce.Shared.Mediator;
 using FastEndpoints;
 using GetOrderByIdEndpoint = ECommerce.Modules.Orders.Features.GetOrderById.Endpoint;
@@ -14,8 +15,8 @@ public class Endpoint : Endpoint<PlaceOrderRequest, OrderResponse>
 
     public override async Task HandleAsync(PlaceOrderRequest req, CancellationToken ct)
     {
-        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
-        var result = await _mediator.Send(new PlaceOrderCommand(userId, req.ShippingAddress, req.Notes), ct);
+        string userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+        Result<OrderResponse> result = await _mediator.Send(new PlaceOrderCommand(userId, req.ShippingAddress, req.Notes), ct);
         if (!result.IsSuccess) { await HttpContext.Response.SendAsync(new { error = result.Error }, 400, cancellation: ct); return; }
         await Send.CreatedAtAsync<GetOrderByIdEndpoint>(new { orderId = result.Value!.Id }, result.Value, cancellation: ct);
     }

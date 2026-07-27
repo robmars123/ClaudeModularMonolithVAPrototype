@@ -1,3 +1,4 @@
+using ECommerce.Shared.Common;
 using ECommerce.Shared.Mediator;
 using FastEndpoints;
 
@@ -16,7 +17,7 @@ public class Endpoint : Endpoint<RegisterUserCommand, AuthResponse>
 
     public override async Task HandleAsync(RegisterUserCommand cmd, CancellationToken ct)
     {
-        var result = await _mediator.Send(cmd, ct);
+        Result<AuthResponse> result = await _mediator.Send(cmd, ct);
         if (!result.IsSuccess) { await HttpContext.Response.SendAsync(new { errors = result.Errors }, 400, cancellation: ct); return; }
         await Send.OkAsync(result.Value!, ct);
     }

@@ -21,14 +21,14 @@ public sealed class PlaceOrderIdempotencyGuard
     /// </summary>
     public Guid? TryAcquire(string userId)
     {
-        var now = DateTime.UtcNow;
-        var claim = (Token: Guid.NewGuid(), ExpiresAt: now.Add(LeaseDuration));
+        DateTime now = DateTime.UtcNow;
+        (Guid Token, DateTime ExpiresAt) claim = (Token: Guid.NewGuid(), ExpiresAt: now.Add(LeaseDuration));
 
         if (_leases.TryAdd(userId, claim))
             return claim.Token;
 
         // A lease exists — only take over if it's stale (e.g. a prior request crashed without releasing).
-        if (_leases.TryGetValue(userId, out var existing) && existing.ExpiresAt <= now
+        if (_leases.TryGetValue(userId, out (Guid Token, DateTime ExpiresAt) existing) && existing.ExpiresAt <= now
             && _leases.TryUpdate(userId, claim, existing))
         {
             return claim.Token;
@@ -44,7 +44,7 @@ public sealed class PlaceOrderIdempotencyGuard
     /// </summary>
     public void Release(string userId, Guid token)
     {
-        if (_leases.TryGetValue(userId, out var current) && current.Token == token)
+        if (_leases.TryGetValue(userId, out (Guid Token, DateTime ExpiresAt) current) && current.Token == token)
             _leases.TryRemove(new KeyValuePair<string, (Guid, DateTime)>(userId, current));
     }
 }

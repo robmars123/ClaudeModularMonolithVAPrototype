@@ -18,13 +18,13 @@ public sealed class SqliteTestDatabase : IDisposable
         _connection = new SqliteConnection("DataSource=:memory:");
         _connection.Open();
 
-        using var context = CreateContext();
+        using TestDbContext context = CreateContext();
         context.Database.EnsureCreated();
     }
 
     public TestDbContext CreateContext()
     {
-        var options = new DbContextOptionsBuilder<TestDbContext>()
+        DbContextOptions<TestDbContext> options = new DbContextOptionsBuilder<TestDbContext>()
             .UseSqlite(_connection)
             .Options;
         return new TestDbContext(options);

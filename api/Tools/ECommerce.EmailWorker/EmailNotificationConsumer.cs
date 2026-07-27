@@ -23,7 +23,7 @@ public sealed class EmailNotificationConsumer(IRabbitMqConnectionProvider connec
 
     protected override Task HandleAsync(string type, string payload, CancellationToken ct)
     {
-        var evt = JsonSerializer.Deserialize<UserRegisteredEvent>(payload);
+        UserRegisteredEvent? evt = JsonSerializer.Deserialize<UserRegisteredEvent>(payload);
         if (evt is null)
         {
             logger.LogWarning("Received {Type} but could not deserialize payload: {Payload}", type, payload);

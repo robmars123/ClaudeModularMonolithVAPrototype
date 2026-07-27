@@ -24,8 +24,8 @@ public static class QueryablePagingExtensions
         page = Math.Max(1, page);
         pageSize = Math.Clamp(pageSize, 1, MaxPageSize);
 
-        var total = await orderedQuery.CountAsync(ct);
-        var items = await orderedQuery
+        int total = await orderedQuery.CountAsync(ct);
+        List<TResult> items = await orderedQuery
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .Select(selector)

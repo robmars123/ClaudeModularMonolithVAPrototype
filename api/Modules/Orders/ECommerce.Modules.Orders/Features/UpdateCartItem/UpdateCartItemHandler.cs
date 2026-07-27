@@ -1,3 +1,4 @@
+using ECommerce.Modules.Orders.Entities;
 using ECommerce.Modules.Orders.Features.GetCart;
 using ECommerce.Modules.Orders.Persistence;
 using ECommerce.Shared.Common;
@@ -16,7 +17,7 @@ public class UpdateCartItemHandler : IRequestHandler<UpdateCartItemCommand, Resu
         if (cmd.Quantity <= 0)
             return Result<CartResponse>.Failure("Quantity must be greater than zero.");
 
-        var cart = await _db.Carts
+        Cart? cart = await _db.Carts
             .Include(c => c.Items)
             .FirstOrDefaultAsync(c => c.UserId == cmd.UserId && c.Status == "Active", ct);
 
@@ -25,7 +26,7 @@ public class UpdateCartItemHandler : IRequestHandler<UpdateCartItemCommand, Resu
         cart.UpdateItemQuantity(cmd.ProductId, cmd.Quantity);
         await _db.SaveChangesAsync(ct);
 
-        var response = new CartResponse(
+        CartResponse response = new CartResponse(
             cart.Id, cart.UserId,
             cart.Items.Select(i => new CartItemResponse(i.Id, i.ProductId, i.ProductName, i.UnitPrice, i.Quantity, i.UnitPrice * i.Quantity)).ToList(),
             cart.TotalAmount, cart.Status, cart.CreatedAt);

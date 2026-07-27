@@ -21,7 +21,7 @@ using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 
-var builder = WebApplication.CreateBuilder(args);
+WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
 const string PlaceholderJwtSecret = "ECommerce-SuperSecretKey-ChangeInProduction-MinLength32Chars!";
 if (!builder.Environment.IsDevelopment() &&
@@ -45,7 +45,7 @@ builder.Services.AddOptions<JwtOptions>()
     .Bind(builder.Configuration.GetSection(JwtOptions.SectionName))
     .ValidateOnStart();
 builder.Services.AddSingleton<IValidateOptions<JwtOptions>, JwtOptionsValidator>();
-var jwtOptions = builder.Configuration.GetSection(JwtOptions.SectionName).Get<JwtOptions>() ?? new JwtOptions();
+JwtOptions jwtOptions = builder.Configuration.GetSection(JwtOptions.SectionName).Get<JwtOptions>() ?? new JwtOptions();
 
 // JWT bearer auth. UsersModule's AddIdentity() also calls AddAuthentication() internally
 // and explicitly sets Identity's own cookie scheme as the default authenticate/challenge
@@ -87,7 +87,7 @@ builder.Services.AddSingleton<ICorrelationIdAccessor, CorrelationIdAccessor>();
 // Each module registers its own IIntegrationEventPublisher/IOutboxStore against its own DbContext.
 builder.Services.AddRabbitMqMessaging(builder.Configuration);
 
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+string? connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 
 builder.Services.AddHealthChecks()
     .AddCheck("database", new SqlDatabaseHealthCheck(connectionString), tags: ["ready"])
@@ -120,7 +120,7 @@ builder.Services.SwaggerDocument(o =>
 // An empty/missing list in Development falls back to the local Vite dev server; outside Development
 // it's a misconfiguration (would otherwise silently block every legitimate cross-origin request), so
 // it fails fast at startup — same treatment as the JWT secret check above.
-var clientOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [];
+string[] clientOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [];
 if (clientOrigins.Length == 0)
 {
     if (!builder.Environment.IsDevelopment())
@@ -162,8 +162,8 @@ builder.Services.AddRateLimiter(options =>
         if (context.Request.Path.StartsWithSegments("/health"))
             return RateLimitPartition.GetNoLimiter("health");
 
-        var ip = context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
-        var isAuthPath = context.Request.Path.StartsWithSegments("/api/auth");
+        string ip = context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+        bool isAuthPath = context.Request.Path.StartsWithSegments("/api/auth");
 
         return RateLimitPartition.GetFixedWindowLimiter(
             partitionKey: isAuthPath ? $"auth:{ip}" : $"general:{ip}",
@@ -175,7 +175,7 @@ builder.Services.AddRateLimiter(options =>
     });
 });
 
-var app = builder.Build();
+WebApplication app = builder.Build();
 
 // Migrate and seed the database on startup
 await DatabaseMigrator.MigrateAndSeedAsync(app);

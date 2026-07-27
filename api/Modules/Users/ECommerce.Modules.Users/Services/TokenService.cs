@@ -19,8 +19,8 @@ public class TokenService
 
     public string GenerateAccessToken(ApplicationUser user, IList<string> roles)
     {
-        var key = Encoding.UTF8.GetBytes(_options.Secret);
-        var claims = new List<Claim>
+        byte[] key = Encoding.UTF8.GetBytes(_options.Secret);
+        List<Claim> claims = new List<Claim>
         {
             new(ClaimTypes.NameIdentifier, user.Id),
             new(ClaimTypes.Email, user.Email!),
@@ -29,7 +29,7 @@ public class TokenService
         };
         claims.AddRange(roles.Select(r => new Claim(ClaimTypes.Role, r)));
 
-        var token = new JwtSecurityTokenHandler().CreateToken(new SecurityTokenDescriptor
+        SecurityToken token = new JwtSecurityTokenHandler().CreateToken(new SecurityTokenDescriptor
         {
             Subject = new ClaimsIdentity(claims),
             Expires = DateTime.UtcNow.AddMinutes(AccessTokenExpiryMinutes),
@@ -43,7 +43,7 @@ public class TokenService
     /// <summary>Cryptographically random opaque refresh token. Returns the raw value (sent to the client, never stored) and its hash (persisted).</summary>
     public (string RawToken, string Hash) GenerateRefreshToken()
     {
-        var raw = Convert.ToBase64String(RandomNumberGenerator.GetBytes(64));
+        string raw = Convert.ToBase64String(RandomNumberGenerator.GetBytes(64));
         return (raw, Hash(raw));
     }
 

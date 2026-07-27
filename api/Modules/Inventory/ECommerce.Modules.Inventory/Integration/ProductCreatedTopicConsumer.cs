@@ -23,7 +23,7 @@ public sealed class ProductCreatedTopicConsumer(IRabbitMqConnectionProvider conn
 
     protected override Task HandleAsync(string type, string payload, CancellationToken ct)
     {
-        var evt = JsonSerializer.Deserialize<ProductCreatedEvent>(payload);
+        ProductCreatedEvent? evt = JsonSerializer.Deserialize<ProductCreatedEvent>(payload);
         logger.LogInformation(
             "[RabbitMQ pub/sub] Inventory received {Type} for product {Sku} ({Name}).",
             type, evt?.Sku, evt?.Name);

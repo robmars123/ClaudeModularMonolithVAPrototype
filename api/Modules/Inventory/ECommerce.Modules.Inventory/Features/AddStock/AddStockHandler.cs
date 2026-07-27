@@ -1,3 +1,4 @@
+using ECommerce.Modules.Inventory.Entities;
 using ECommerce.Modules.Inventory.Features.GetInventory;
 using ECommerce.Modules.Inventory.Persistence;
 using ECommerce.Shared.Common;
@@ -13,7 +14,7 @@ public class AddStockHandler : IRequestHandler<AddStockCommand, Result<Inventory
 
     public async Task<Result<InventoryResponse>> Handle(AddStockCommand cmd, CancellationToken ct)
     {
-        var item = await _db.InventoryItems.FirstOrDefaultAsync(i => i.ProductId == cmd.ProductId, ct);
+        InventoryItem? item = await _db.InventoryItems.FirstOrDefaultAsync(i => i.ProductId == cmd.ProductId, ct);
         if (item is null) return Result<InventoryResponse>.Failure("Inventory record not found.");
         item.AddStock(cmd.Quantity, cmd.UserId);
         await _db.SaveChangesAsync(ct);

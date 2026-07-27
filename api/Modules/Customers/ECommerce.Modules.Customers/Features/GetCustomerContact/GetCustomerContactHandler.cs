@@ -1,3 +1,4 @@
+using ECommerce.Modules.Customers.Entities;
 using ECommerce.Modules.Customers.Persistence;
 using ECommerce.Shared.Common;
 using ECommerce.Shared.Contracts.Customers;
@@ -14,7 +15,7 @@ public class GetCustomerContactHandler : IRequestHandler<GetCustomerContactReque
 
     public async Task<Result<CustomerContactDto>> Handle(GetCustomerContactRequest request, CancellationToken ct)
     {
-        var customer = await _db.Customers.AsNoTracking()
+        Customer? customer = await _db.Customers.AsNoTracking()
             .FirstOrDefaultAsync(c => c.UserId == request.UserId, ct);
 
         return customer is null

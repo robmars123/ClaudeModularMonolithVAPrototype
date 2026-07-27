@@ -17,7 +17,7 @@ public class CreateInventoryItemHandler : IRequestHandler<CreateInventoryItemCom
         if (await _db.InventoryItems.AnyAsync(i => i.ProductId == cmd.ProductId, ct))
             return Result<InventoryResponse>.Failure("Inventory record already exists.");
 
-        var item = InventoryItem.Create(cmd.ProductId, cmd.InitialQuantity, cmd.ReorderLevel, cmd.ReorderQuantity, cmd.CreatedBy);
+        InventoryItem item = InventoryItem.Create(cmd.ProductId, cmd.InitialQuantity, cmd.ReorderLevel, cmd.ReorderQuantity, cmd.CreatedBy);
         _db.InventoryItems.Add(item);
         await _db.SaveChangesAsync(ct);
         return Result<InventoryResponse>.Success(new InventoryResponse(item.Id, item.ProductId, item.QuantityOnHand, item.ReservedQuantity, item.AvailableQuantity, item.ReorderLevel, item.ReorderQuantity, item.NeedsReorder, item.CreatedAt, item.UpdatedAt));

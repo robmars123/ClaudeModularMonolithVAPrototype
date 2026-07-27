@@ -60,7 +60,7 @@ public abstract class RabbitMqConsumerBackgroundService(
     {
         while (!stoppingToken.IsCancellationRequested)
         {
-            var channel = await connections.GetChannelAsync(stoppingToken).ConfigureAwait(false);
+            IChannel? channel = await connections.GetChannelAsync(stoppingToken).ConfigureAwait(false);
             if (channel is null)
             {
                 await Task.Delay(RetryDelay, stoppingToken).ConfigureAwait(false);
@@ -80,7 +80,7 @@ public abstract class RabbitMqConsumerBackgroundService(
                         await channel.QueueBindAsync(QueueName, BindExchange, RoutingKey ?? "#", cancellationToken: stoppingToken).ConfigureAwait(false);
                     }
 
-                    var consumer = new AsyncEventingBasicConsumer(channel);
+                    AsyncEventingBasicConsumer consumer = new AsyncEventingBasicConsumer(channel);
                     consumer.ReceivedAsync += (_, ea) => OnReceivedAsync(channel, ea, stoppingToken);
 
                     await channel.BasicConsumeAsync(QueueName, autoAck: false, consumer, cancellationToken: stoppingToken).ConfigureAwait(false);
@@ -99,14 +99,14 @@ public abstract class RabbitMqConsumerBackgroundService(
 
     private async Task OnReceivedAsync(IChannel channel, BasicDeliverEventArgs ea, CancellationToken stoppingToken)
     {
-        var type = ea.BasicProperties.Type ?? "unknown";
-        var payload = Encoding.UTF8.GetString(ea.Body.ToArray());
-        var messageId = string.IsNullOrWhiteSpace(ea.BasicProperties.MessageId) ? Guid.NewGuid().ToString() : ea.BasicProperties.MessageId;
-        var correlationId = ea.BasicProperties.CorrelationId;
+        string type = ea.BasicProperties.Type ?? "unknown";
+        string payload = Encoding.UTF8.GetString(ea.Body.ToArray());
+        string messageId = string.IsNullOrWhiteSpace(ea.BasicProperties.MessageId) ? Guid.NewGuid().ToString() : ea.BasicProperties.MessageId;
+        string? correlationId = ea.BasicProperties.CorrelationId;
 
         correlation.CorrelationId = correlationId;
 
-        using var _ = logger.BeginScope(new Dictionary<string, object?>
+        using IDisposable? _ = logger.BeginScope(new Dictionary<string, object?>
         {
             ["MessageId"] = messageId,
             ["CorrelationId"] = correlationId,
@@ -115,8 +115,8 @@ public abstract class RabbitMqConsumerBackgroundService(
 
         try
         {
-            await using var scope = scopeFactory.CreateAsyncScope();
-            var inbox = InboxKey is null
+            await using AsyncServiceScope scope = scopeFactory.CreateAsyncScope();
+            IInboxStore inbox = InboxKey is null
                 ? scope.ServiceProvider.GetRequiredService<IInboxStore>()
                 : scope.ServiceProvider.GetRequiredKeyedService<IInboxStore>(InboxKey);
 
@@ -139,9 +139,9 @@ public abstract class RabbitMqConsumerBackgroundService(
 
     private async Task HandleFailureAsync(IChannel channel, BasicDeliverEventArgs ea, string type, string payload, string messageId, string? correlationId, Exception ex, CancellationToken stoppingToken)
     {
-        var headers = ea.BasicProperties.Headers;
-        var attempt = RetryPolicy.GetAttempt(headers) + 1;
-        var routeToDlq = attempt > RetryPolicy.MaxAttempts;
+        IDictionary<string, object?>? headers = ea.BasicProperties.Headers;
+        int attempt = RetryPolicy.GetAttempt(headers) + 1;
+        bool routeToDlq = attempt > RetryPolicy.MaxAttempts;
 
         string destination;
         Dictionary<string, object?> nextHeaders;
@@ -162,7 +162,7 @@ public abstract class RabbitMqConsumerBackgroundService(
             // of blocking this queue's single consumer loop behind the delay (acceptable for this
             // workload; a per-message-TTL delay queue via the RabbitMQ delayed-message-exchange plugin
             // would avoid the head-of-line blocking at the cost of an extra broker dependency).
-            var delay = RetryPolicy.BackoffFor(attempt);
+            TimeSpan delay = RetryPolicy.BackoffFor(attempt);
             logger.LogWarning(ex, "Message {MessageId} on '{Queue}' failed (attempt {Attempt}/{MaxAttempts}) — retrying in {DelaySeconds}s.", messageId, QueueName, attempt, RetryPolicy.MaxAttempts, delay.TotalSeconds);
             await Task.Delay(delay, stoppingToken).ConfigureAwait(false);
 
@@ -170,7 +170,7 @@ public abstract class RabbitMqConsumerBackgroundService(
             nextHeaders = RetryPolicy.WithIncrementedAttempt(headers);
         }
 
-        var props = new BasicProperties { Persistent = true, Type = type, MessageId = messageId, CorrelationId = correlationId, Headers = nextHeaders };
+        BasicProperties props = new BasicProperties { Persistent = true, Type = type, MessageId = messageId, CorrelationId = correlationId, Headers = nextHeaders };
 
         try
         {

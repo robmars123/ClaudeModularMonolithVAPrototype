@@ -15,13 +15,13 @@ public class CreateStaffUserHandler : IRequestHandler<CreateStaffUserCommand, Re
         if (await _users.FindByEmailAsync(cmd.Email) is not null)
             return Result<StaffUserResponse>.Failure("Email already registered.");
 
-        var user = new ApplicationUser { FirstName = cmd.FirstName, LastName = cmd.LastName, Email = cmd.Email, UserName = cmd.Email, EmailConfirmed = true };
+        ApplicationUser user = new ApplicationUser { FirstName = cmd.FirstName, LastName = cmd.LastName, Email = cmd.Email, UserName = cmd.Email, EmailConfirmed = true };
 
-        var result = await _users.CreateAsync(user, cmd.Password);
+        IdentityResult result = await _users.CreateAsync(user, cmd.Password);
         if (!result.Succeeded)
             return Result<StaffUserResponse>.Failure(result.Errors.Select(e => e.Description).ToList());
 
-        var roleResult = await _users.AddToRoleAsync(user, cmd.Role);
+        IdentityResult roleResult = await _users.AddToRoleAsync(user, cmd.Role);
         if (!roleResult.Succeeded)
         {
             // The user account exists but has no role — leaving it half-provisioned is worse than

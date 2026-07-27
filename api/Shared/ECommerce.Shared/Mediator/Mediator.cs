@@ -17,7 +17,7 @@ public sealed class Mediator(IServiceProvider serviceProvider) : IMediator
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        var dispatcher = (RequestDispatcher<TResponse>)RequestDispatchers.GetOrAdd(
+        RequestDispatcher<TResponse> dispatcher = (RequestDispatcher<TResponse>)RequestDispatchers.GetOrAdd(
             request.GetType(),
             static requestType => Activator.CreateInstance(
                 typeof(RequestDispatcher<,>).MakeGenericType(requestType, typeof(TResponse)))!);
@@ -29,7 +29,7 @@ public sealed class Mediator(IServiceProvider serviceProvider) : IMediator
     {
         ArgumentNullException.ThrowIfNull(notification);
 
-        var dispatcher = NotificationDispatchers.GetOrAdd(
+        NotificationDispatcher dispatcher = NotificationDispatchers.GetOrAdd(
             notification.GetType(),
             static notificationType => (NotificationDispatcher)Activator.CreateInstance(
                 typeof(NotificationDispatcher<>).MakeGenericType(notificationType))!);
@@ -47,7 +47,7 @@ public sealed class Mediator(IServiceProvider serviceProvider) : IMediator
     {
         public override Task<TResponse> Dispatch(IRequest<TResponse> request, IServiceProvider services, CancellationToken cancellationToken)
         {
-            var handler = services.GetService<IRequestHandler<TRequest, TResponse>>()
+            IRequestHandler<TRequest, TResponse> handler = services.GetService<IRequestHandler<TRequest, TResponse>>()
                 ?? throw new InvalidOperationException(
                     $"No handler registered for '{typeof(TRequest).FullName}'. " +
                     "Ensure the owning module passes its assembly to AddMediator().");
@@ -55,9 +55,9 @@ public sealed class Mediator(IServiceProvider serviceProvider) : IMediator
             RequestHandlerDelegate<TResponse> pipeline = () => handler.Handle((TRequest)request, cancellationToken);
 
             // Wrap behaviors in reverse so the first registered behavior is outermost.
-            foreach (var behavior in services.GetServices<IPipelineBehavior<TRequest, TResponse>>().Reverse())
+            foreach (IPipelineBehavior<TRequest, TResponse>? behavior in services.GetServices<IPipelineBehavior<TRequest, TResponse>>().Reverse())
             {
-                var next = pipeline;
+                RequestHandlerDelegate<TResponse> next = pipeline;
                 pipeline = () => behavior.Handle((TRequest)request, next, cancellationToken);
             }
 
@@ -79,7 +79,7 @@ public sealed class Mediator(IServiceProvider serviceProvider) : IMediator
 
             // Run every handler even if an earlier one fails, then surface all failures together —
             // one module's subscriber must not silently starve another's.
-            foreach (var handler in services.GetServices<INotificationHandler<TNotification>>())
+            foreach (INotificationHandler<TNotification> handler in services.GetServices<INotificationHandler<TNotification>>())
             {
                 try
                 {

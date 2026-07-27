@@ -25,7 +25,7 @@ public sealed class UsersTestHost : IDisposable
         _connection = new SqliteConnection("DataSource=:memory:");
         _connection.Open();
 
-        var collection = new ServiceCollection();
+        ServiceCollection collection = new ServiceCollection();
         collection.AddLogging();
         collection.AddDataProtection();
         collection.AddHttpContextAccessor();
@@ -56,11 +56,11 @@ public sealed class UsersTestHost : IDisposable
 
         _services = collection.BuildServiceProvider();
 
-        using var scope = _services.CreateScope();
+        using IServiceScope scope = _services.CreateScope();
         scope.ServiceProvider.GetRequiredService<UsersDbContext>().Database.EnsureCreated();
 
-        var roles = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
-        foreach (var role in Roles.All)
+        RoleManager<IdentityRole> roles = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
+        foreach (string role in Roles.All)
             roles.CreateAsync(new IdentityRole(role)).GetAwaiter().GetResult();
     }
 

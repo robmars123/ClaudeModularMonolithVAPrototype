@@ -18,7 +18,7 @@ public class Customer : AuditableEntity
 
     public static Customer Create(string userId, string firstName, string lastName, string email)
     {
-        var c = new Customer { UserId = userId, FirstName = firstName, LastName = lastName, Email = email };
+        Customer c = new Customer { UserId = userId, FirstName = firstName, LastName = lastName, Email = email };
         c.SetCreatedBy(userId);
         return c;
     }

@@ -1,4 +1,5 @@
 using ECommerce.Shared.Observability;
+using Microsoft.Extensions.Primitives;
 
 namespace ECommerce.Host.Infrastructure;
 
@@ -13,7 +14,7 @@ public sealed class CorrelationIdMiddleware(RequestDelegate next)
 
     public async Task InvokeAsync(HttpContext context, ICorrelationIdAccessor correlation, ILogger<CorrelationIdMiddleware> logger)
     {
-        var correlationId = context.Request.Headers.TryGetValue(HeaderName, out var existing) && !string.IsNullOrWhiteSpace(existing)
+        string correlationId = context.Request.Headers.TryGetValue(HeaderName, out StringValues existing) && !string.IsNullOrWhiteSpace(existing)
             ? existing.ToString()
             : Guid.NewGuid().ToString("n");
 

@@ -20,16 +20,16 @@ public class LoginUserHandler : IRequestHandler<LoginUserCommand, Result<AuthRes
 
     public async Task<Result<AuthResponse>> Handle(LoginUserCommand cmd, CancellationToken ct)
     {
-        var user = await _users.FindByEmailAsync(cmd.Email);
+        ApplicationUser? user = await _users.FindByEmailAsync(cmd.Email);
         if (user is null || !user.IsActive)
             return Result<AuthResponse>.Failure("Invalid email or password.");
 
-        var result = await _signIn.CheckPasswordSignInAsync(user, cmd.Password, lockoutOnFailure: true);
+        SignInResult result = await _signIn.CheckPasswordSignInAsync(user, cmd.Password, lockoutOnFailure: true);
         if (!result.Succeeded)
             return Result<AuthResponse>.Failure(result.IsLockedOut ? "Account locked. Try again later." : "Invalid email or password.");
 
-        var roles = await _users.GetRolesAsync(user);
-        var response = await _issuer.IssueAsync(user, roles, ct);
+        IList<string> roles = await _users.GetRolesAsync(user);
+        AuthResponse response = await _issuer.IssueAsync(user, roles, ct);
         return Result<AuthResponse>.Success(response);
     }
 }

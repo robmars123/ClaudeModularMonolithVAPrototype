@@ -48,11 +48,11 @@ public sealed class MediatorTests
     [Fact]
     public async Task Send_throws_a_descriptive_exception_when_no_handler_is_registered()
     {
-        var services = new ServiceCollection();
+        ServiceCollection services = new ServiceCollection();
         services.AddMediator();
-        var mediator = services.BuildServiceProvider().GetRequiredService<IMediator>();
+        IMediator mediator = services.BuildServiceProvider().GetRequiredService<IMediator>();
 
-        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => mediator.Send(new UnhandledPing()));
+        InvalidOperationException ex = await Assert.ThrowsAsync<InvalidOperationException>(() => mediator.Send(new UnhandledPing()));
 
         Assert.Contains(nameof(UnhandledPing), ex.Message);
     }
@@ -60,13 +60,13 @@ public sealed class MediatorTests
     [Fact]
     public async Task Publish_runs_every_handler_and_aggregates_failures_instead_of_short_circuiting()
     {
-        var services = new ServiceCollection();
+        ServiceCollection services = new ServiceCollection();
         services.AddMediator();
         services.AddTransient<INotificationHandler<PingNotification>, ThrowingHandler>();
-        var tracking = new TrackingHandler();
+        TrackingHandler tracking = new TrackingHandler();
         services.AddSingleton<INotificationHandler<PingNotification>>(tracking);
 
-        var mediator = services.BuildServiceProvider().GetRequiredService<IMediator>();
+        IMediator mediator = services.BuildServiceProvider().GetRequiredService<IMediator>();
 
         await Assert.ThrowsAnyAsync<Exception>(() => mediator.Publish(new PingNotification()));
 
@@ -77,14 +77,14 @@ public sealed class MediatorTests
     [Fact]
     public async Task ValidationBehavior_short_circuits_before_the_handler_runs()
     {
-        var services = new ServiceCollection();
+        ServiceCollection services = new ServiceCollection();
         services.AddMediator();
         services.AddPipelineBehavior(typeof(ValidationBehavior<,>));
-        var handler = new ValidatedCommandHandler();
+        ValidatedCommandHandler handler = new ValidatedCommandHandler();
         services.AddSingleton<IRequestHandler<ValidatedCommand, Result<string>>>(handler);
 
-        var mediator = services.BuildServiceProvider().GetRequiredService<IMediator>();
-        var result = await mediator.Send(new ValidatedCommand(null));
+        IMediator mediator = services.BuildServiceProvider().GetRequiredService<IMediator>();
+        Result<string> result = await mediator.Send(new ValidatedCommand(null));
 
         Assert.False(result.IsSuccess);
         Assert.False(handler.WasCalled);
@@ -93,14 +93,14 @@ public sealed class MediatorTests
     [Fact]
     public async Task ValidationBehavior_lets_valid_requests_reach_the_handler()
     {
-        var services = new ServiceCollection();
+        ServiceCollection services = new ServiceCollection();
         services.AddMediator();
         services.AddPipelineBehavior(typeof(ValidationBehavior<,>));
-        var handler = new ValidatedCommandHandler();
+        ValidatedCommandHandler handler = new ValidatedCommandHandler();
         services.AddSingleton<IRequestHandler<ValidatedCommand, Result<string>>>(handler);
 
-        var mediator = services.BuildServiceProvider().GetRequiredService<IMediator>();
-        var result = await mediator.Send(new ValidatedCommand("Jane"));
+        IMediator mediator = services.BuildServiceProvider().GetRequiredService<IMediator>();
+        Result<string> result = await mediator.Send(new ValidatedCommand("Jane"));
 
         Assert.True(result.IsSuccess);
         Assert.True(handler.WasCalled);

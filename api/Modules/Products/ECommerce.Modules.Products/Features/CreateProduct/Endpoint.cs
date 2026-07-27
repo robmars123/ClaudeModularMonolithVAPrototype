@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using ECommerce.Modules.Products.Features.GetProducts;
+using ECommerce.Shared.Common;
 using ECommerce.Shared.Mediator;
 using FastEndpoints;
 using GetProductByIdEndpoint = ECommerce.Modules.Products.Features.GetProductById.Endpoint;
@@ -19,8 +20,8 @@ public class Endpoint : Endpoint<CreateProductRequest, ProductResponse>
 
     public override async Task HandleAsync(CreateProductRequest req, CancellationToken ct)
     {
-        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
-        var result = await _mediator.Send(new CreateProductCommand(req.Name, req.Description, req.SKU, req.Price, req.CategoryId, req.ImageUrl, userId), ct);
+        string userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+        Result<ProductResponse> result = await _mediator.Send(new CreateProductCommand(req.Name, req.Description, req.SKU, req.Price, req.CategoryId, req.ImageUrl, userId), ct);
         if (!result.IsSuccess) { await HttpContext.Response.SendAsync(new { errors = result.Errors }, 400, cancellation: ct); return; }
         await Send.CreatedAtAsync<GetProductByIdEndpoint>(new { id = result.Value!.Id }, result.Value, cancellation: ct);
     }

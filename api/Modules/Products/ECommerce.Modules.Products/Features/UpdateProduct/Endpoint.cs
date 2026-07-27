@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using ECommerce.Modules.Products.Features.GetProducts;
+using ECommerce.Shared.Common;
 using ECommerce.Shared.Mediator;
 using FastEndpoints;
 
@@ -18,8 +19,8 @@ public class Endpoint : Endpoint<UpdateProductRequest, ProductResponse>
 
     public override async Task HandleAsync(UpdateProductRequest req, CancellationToken ct)
     {
-        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
-        var result = await _mediator.Send(new UpdateProductCommand(req.Id, req.Name, req.Description, req.Price, req.CategoryId, req.ImageUrl, userId), ct);
+        string userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+        Result<ProductResponse> result = await _mediator.Send(new UpdateProductCommand(req.Id, req.Name, req.Description, req.Price, req.CategoryId, req.ImageUrl, userId), ct);
         if (!result.IsSuccess)
         {
             await HttpContext.Response.SendAsync(new { errors = result.Errors }, result.Error!.Contains("not found") ? 404 : 400, cancellation: ct);

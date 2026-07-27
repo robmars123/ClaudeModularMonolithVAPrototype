@@ -23,7 +23,7 @@ public sealed class UserRegisteredTopicConsumer(IRabbitMqConnectionProvider conn
 
     protected override Task HandleAsync(string type, string payload, CancellationToken ct)
     {
-        var evt = JsonSerializer.Deserialize<UserRegisteredEvent>(payload);
+        UserRegisteredEvent? evt = JsonSerializer.Deserialize<UserRegisteredEvent>(payload);
         logger.LogInformation(
             "[RabbitMQ pub/sub] Customers received {Type} for {Email}.",
             type, evt?.Email);

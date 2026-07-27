@@ -1,3 +1,4 @@
+using ECommerce.Shared.Common;
 using ECommerce.Shared.Mediator;
 using FastEndpoints;
 
@@ -16,7 +17,7 @@ public class Endpoint : Endpoint<GetProductsRequest>
 
     public override async Task HandleAsync(GetProductsRequest req, CancellationToken ct)
     {
-        var result = await _mediator.Send(new GetProductsQuery(req.Page, req.PageSize, req.Search, req.CategoryId, req.IsActive), ct);
+        Result<PagedResult<ProductResponse>> result = await _mediator.Send(new GetProductsQuery(req.Page, req.PageSize, req.Search, req.CategoryId, req.IsActive), ct);
         await Send.OkAsync(result.Value!, ct);
     }
 }

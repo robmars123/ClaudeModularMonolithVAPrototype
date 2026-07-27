@@ -18,7 +18,7 @@ public sealed class OutboxDispatcher(IServiceScopeFactory scopeFactory, IOptions
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        using var timer = new PeriodicTimer(PollInterval);
+        using PeriodicTimer timer = new PeriodicTimer(PollInterval);
 
         try
         {
@@ -43,23 +43,23 @@ public sealed class OutboxDispatcher(IServiceScopeFactory scopeFactory, IOptions
     private async Task DispatchPendingAsync(CancellationToken ct)
     {
         // Every module registers its own IOutboxStore (backed by its own DbContext/schema) — drain them all each tick.
-        await using var scope = scopeFactory.CreateAsyncScope();
-        var outboxStores = scope.ServiceProvider.GetServices<IOutboxStore>();
-        var publisher = scope.ServiceProvider.GetRequiredService<IRabbitMqPublisher>();
+        await using AsyncServiceScope scope = scopeFactory.CreateAsyncScope();
+        IEnumerable<IOutboxStore> outboxStores = scope.ServiceProvider.GetServices<IOutboxStore>();
+        IRabbitMqPublisher publisher = scope.ServiceProvider.GetRequiredService<IRabbitMqPublisher>();
 
-        foreach (var outbox in outboxStores)
+        foreach (IOutboxStore outbox in outboxStores)
             await DispatchFromStoreAsync(outbox, publisher, ct).ConfigureAwait(false);
     }
 
     private async Task DispatchFromStoreAsync(IOutboxStore outbox, IRabbitMqPublisher publisher, CancellationToken ct)
     {
-        var pending = await outbox.GetUnprocessedAsync(BatchSize, ct).ConfigureAwait(false);
+        IReadOnlyList<OutboxMessage> pending = await outbox.GetUnprocessedAsync(BatchSize, ct).ConfigureAwait(false);
 
-        foreach (var message in pending)
+        foreach (OutboxMessage message in pending)
         {
             try
             {
-                var messageId = message.Id.ToString();
+                string messageId = message.Id.ToString();
 
                 if (message.Kind == MessageKind.PointToPoint)
                     await publisher.PublishToQueueAsync(message.Destination, message.Type, message.Payload, messageId, message.CorrelationId, ct).ConfigureAwait(false);

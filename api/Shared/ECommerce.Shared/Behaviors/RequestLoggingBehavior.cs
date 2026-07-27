@@ -12,14 +12,14 @@ public sealed class RequestLoggingBehavior<TRequest, TResponse>(ILogger<RequestL
 {
     public async Task<TResponse> Handle(TRequest request, RequestHandlerDelegate<TResponse> next, CancellationToken cancellationToken)
     {
-        var requestName = typeof(TRequest).Name;
-        var stopwatch = Stopwatch.StartNew();
+        string requestName = typeof(TRequest).Name;
+        Stopwatch stopwatch = Stopwatch.StartNew();
 
-        using var scope = logger.BeginScope(new Dictionary<string, object?> { ["CorrelationId"] = correlation.CorrelationId });
+        using IDisposable? scope = logger.BeginScope(new Dictionary<string, object?> { ["CorrelationId"] = correlation.CorrelationId });
 
         try
         {
-            var response = await next().ConfigureAwait(false);
+            TResponse? response = await next().ConfigureAwait(false);
             logger.LogInformation("Handled {RequestName} in {ElapsedMs} ms", requestName, stopwatch.ElapsedMilliseconds);
             return response;
         }

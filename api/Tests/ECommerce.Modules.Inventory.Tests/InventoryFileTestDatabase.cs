@@ -17,17 +17,17 @@ public sealed class InventoryFileTestDatabase : IDisposable
     {
         _path = Path.Combine(Path.GetTempPath(), $"inventory-tests-{Guid.NewGuid():N}.db");
 
-        using var context = CreateContext();
+        using InventoryDbContext context = CreateContext();
         context.Database.EnsureCreated();
     }
 
     public InventoryDbContext CreateContext()
     {
-        var options = new DbContextOptionsBuilder<InventoryDbContext>()
+        DbContextOptions<InventoryDbContext> options = new DbContextOptionsBuilder<InventoryDbContext>()
             .UseSqlite($"Data Source={_path};Cache=Shared;Pooling=False")
             .Options;
 
-        var context = new InventoryDbContext(options);
+        InventoryDbContext context = new InventoryDbContext(options);
         // WAL + a busy timeout let concurrent writers retry instead of immediately throwing
         // "database is locked" — the point of this test double is genuine concurrent access.
         context.Database.ExecuteSqlRaw("PRAGMA journal_mode=WAL;");
@@ -39,9 +39,9 @@ public sealed class InventoryFileTestDatabase : IDisposable
     {
         Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools();
 
-        foreach (var suffix in new[] { "", "-wal", "-shm" })
+        foreach (string? suffix in new[] { "", "-wal", "-shm" })
         {
-            var file = _path + suffix;
+            string file = _path + suffix;
             try
             {
                 if (File.Exists(file)) File.Delete(file);

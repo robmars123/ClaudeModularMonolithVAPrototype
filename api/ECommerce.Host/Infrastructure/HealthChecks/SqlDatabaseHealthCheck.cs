@@ -13,8 +13,8 @@ public sealed class SqlDatabaseHealthCheck(string? connectionString) : IHealthCh
 
         try
         {
-            var builder = new SqlConnectionStringBuilder(connectionString) { ConnectTimeout = 3 };
-            await using var connection = new SqlConnection(builder.ConnectionString);
+            SqlConnectionStringBuilder builder = new SqlConnectionStringBuilder(connectionString) { ConnectTimeout = 3 };
+            await using SqlConnection connection = new SqlConnection(builder.ConnectionString);
             await connection.OpenAsync(cancellationToken);
             return HealthCheckResult.Healthy();
         }

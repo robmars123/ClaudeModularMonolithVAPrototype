@@ -15,7 +15,7 @@ public class Category : AuditableEntity
 
     public static Category Create(string name, string? description, string createdBy)
     {
-        var c = new Category { Name = name, Description = description };
+        Category c = new Category { Name = name, Description = description };
         c.SetCreatedBy(createdBy);
         return c;
     }

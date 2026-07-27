@@ -28,7 +28,7 @@ public sealed class PlaceOrderHandlerTests
 
     private static async Task<Guid> SeedActiveCartAsync(OrdersDbContext db, Guid productId)
     {
-        var cart = Cart.Create(UserId);
+        Cart cart = Cart.Create(UserId);
         cart.AddItem(productId, "Widget", 10m, 2);
         db.Carts.Add(cart);
         await db.SaveChangesAsync();
@@ -37,7 +37,7 @@ public sealed class PlaceOrderHandlerTests
 
     private static IMediator MakeMediator(bool stockAvailable = true, bool reservationSucceeds = true)
     {
-        var mediator = Substitute.For<IMediator>();
+        IMediator mediator = Substitute.For<IMediator>();
 
         mediator.Send(Arg.Any<IRequest<Result<int>>>(), Arg.Any<CancellationToken>())
             .Returns(Result<int>.Success(stockAvailable ? 100 : 0));
@@ -61,27 +61,27 @@ public sealed class PlaceOrderHandlerTests
     [Fact]
     public async Task Successful_order_persists_the_order_and_the_outbox_row_atomically()
     {
-        using var db = new OrdersSqliteTestDatabase();
-        var productId = Guid.NewGuid();
+        using OrdersSqliteTestDatabase db = new OrdersSqliteTestDatabase();
+        Guid productId = Guid.NewGuid();
 
-        await using (var setup = db.CreateContext())
+        await using (OrdersDbContext setup = db.CreateContext())
             await SeedActiveCartAsync(setup, productId);
 
-        await using var context = db.CreateContext();
-        var mediator = MakeMediator();
-        var integrationEvents = new EfOutboxIntegrationEventPublisher<OrdersDbContext>(context, Substitute.For<ICorrelationIdAccessor>());
-        var handler = new PlaceOrderHandler(context, mediator, integrationEvents, new PlaceOrderIdempotencyGuard(), Substitute.For<ILogger<PlaceOrderHandler>>());
+        await using OrdersDbContext context = db.CreateContext();
+        IMediator mediator = MakeMediator();
+        EfOutboxIntegrationEventPublisher<OrdersDbContext> integrationEvents = new EfOutboxIntegrationEventPublisher<OrdersDbContext>(context, Substitute.For<ICorrelationIdAccessor>());
+        PlaceOrderHandler handler = new PlaceOrderHandler(context, mediator, integrationEvents, new PlaceOrderIdempotencyGuard(), Substitute.For<ILogger<PlaceOrderHandler>>());
 
-        var result = await handler.Handle(new PlaceOrderCommand(UserId, "123 Main St", null), CancellationToken.None);
+        Result<OrderResponse> result = await handler.Handle(new PlaceOrderCommand(UserId, "123 Main St", null), CancellationToken.None);
 
         Assert.True(result.IsSuccess);
 
-        await using var verify = db.CreateContext();
+        await using OrdersDbContext verify = db.CreateContext();
         Assert.Single(await verify.Orders.ToListAsync());
         // Two outbox rows for the one OrderPlacedEvent: point-to-point (Inventory's stock commit) + pub/sub (order-confirmation notification).
         Assert.Equal(2, await verify.OutboxMessages.CountAsync());
 
-        var cart = await verify.Carts.Include(c => c.Items).SingleAsync();
+        Cart cart = await verify.Carts.Include(c => c.Items).SingleAsync();
         Assert.Empty(cart.Items);
 
         await mediator.Received(1).Send(Arg.Any<ReserveStockRequest>(), Arg.Any<CancellationToken>());
@@ -91,43 +91,43 @@ public sealed class PlaceOrderHandlerTests
     [Fact]
     public async Task Insufficient_stock_fails_without_writing_anything()
     {
-        using var db = new OrdersSqliteTestDatabase();
-        var productId = Guid.NewGuid();
+        using OrdersSqliteTestDatabase db = new OrdersSqliteTestDatabase();
+        Guid productId = Guid.NewGuid();
 
-        await using (var setup = db.CreateContext())
+        await using (OrdersDbContext setup = db.CreateContext())
             await SeedActiveCartAsync(setup, productId);
 
-        await using var context = db.CreateContext();
-        var mediator = MakeMediator(stockAvailable: false);
-        var integrationEvents = new EfOutboxIntegrationEventPublisher<OrdersDbContext>(context, Substitute.For<ICorrelationIdAccessor>());
-        var handler = new PlaceOrderHandler(context, mediator, integrationEvents, new PlaceOrderIdempotencyGuard(), Substitute.For<ILogger<PlaceOrderHandler>>());
+        await using OrdersDbContext context = db.CreateContext();
+        IMediator mediator = MakeMediator(stockAvailable: false);
+        EfOutboxIntegrationEventPublisher<OrdersDbContext> integrationEvents = new EfOutboxIntegrationEventPublisher<OrdersDbContext>(context, Substitute.For<ICorrelationIdAccessor>());
+        PlaceOrderHandler handler = new PlaceOrderHandler(context, mediator, integrationEvents, new PlaceOrderIdempotencyGuard(), Substitute.For<ILogger<PlaceOrderHandler>>());
 
-        var result = await handler.Handle(new PlaceOrderCommand(UserId, "123 Main St", null), CancellationToken.None);
+        Result<OrderResponse> result = await handler.Handle(new PlaceOrderCommand(UserId, "123 Main St", null), CancellationToken.None);
 
         Assert.False(result.IsSuccess);
 
-        await using var verify = db.CreateContext();
+        await using OrdersDbContext verify = db.CreateContext();
         Assert.Empty(await verify.Orders.ToListAsync());
         Assert.Empty(await verify.OutboxMessages.ToListAsync());
 
-        var cart = await verify.Carts.Include(c => c.Items).SingleAsync();
+        Cart cart = await verify.Carts.Include(c => c.Items).SingleAsync();
         Assert.Single(cart.Items); // never cleared
     }
 
     [Fact]
     public async Task Failed_save_triggers_the_compensating_stock_release()
     {
-        using var db = new OrdersSqliteTestDatabase();
-        var productId = Guid.NewGuid();
+        using OrdersSqliteTestDatabase db = new OrdersSqliteTestDatabase();
+        Guid productId = Guid.NewGuid();
 
-        await using (var setup = db.CreateContext())
+        await using (OrdersDbContext setup = db.CreateContext())
             await SeedActiveCartAsync(setup, productId);
 
         // Re-open a context against the same in-memory database, but of the throwing subclass.
-        await using var throwingContext = CreateThrowingContext(db);
-        var mediator = MakeMediator();
-        var integrationEvents = new EfOutboxIntegrationEventPublisher<OrdersDbContext>(throwingContext, Substitute.For<ICorrelationIdAccessor>());
-        var handler = new PlaceOrderHandler(throwingContext, mediator, integrationEvents, new PlaceOrderIdempotencyGuard(), Substitute.For<ILogger<PlaceOrderHandler>>());
+        await using ThrowingOrdersDbContext throwingContext = CreateThrowingContext(db);
+        IMediator mediator = MakeMediator();
+        EfOutboxIntegrationEventPublisher<OrdersDbContext> integrationEvents = new EfOutboxIntegrationEventPublisher<OrdersDbContext>(throwingContext, Substitute.For<ICorrelationIdAccessor>());
+        PlaceOrderHandler handler = new PlaceOrderHandler(throwingContext, mediator, integrationEvents, new PlaceOrderIdempotencyGuard(), Substitute.For<ILogger<PlaceOrderHandler>>());
 
         await Assert.ThrowsAsync<DbUpdateException>(() =>
             handler.Handle(new PlaceOrderCommand(UserId, "123 Main St", null), CancellationToken.None));
@@ -137,8 +137,8 @@ public sealed class PlaceOrderHandlerTests
 
     private static ThrowingOrdersDbContext CreateThrowingContext(OrdersSqliteTestDatabase db)
     {
-        using var probe = db.CreateContext();
-        var options = new DbContextOptionsBuilder<OrdersDbContext>().UseSqlite(probe.Database.GetDbConnection()).Options;
+        using OrdersDbContext probe = db.CreateContext();
+        DbContextOptions<OrdersDbContext> options = new DbContextOptionsBuilder<OrdersDbContext>().UseSqlite(probe.Database.GetDbConnection()).Options;
         return new ThrowingOrdersDbContext(options);
     }
 }

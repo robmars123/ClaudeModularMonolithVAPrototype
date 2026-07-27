@@ -12,7 +12,7 @@ public class CreateCategoryHandler : IRequestHandler<CreateCategoryCommand, Resu
 
     public async Task<Result<CategoryResponse>> Handle(CreateCategoryCommand cmd, CancellationToken ct)
     {
-        var category = Category.Create(cmd.Name, cmd.Description, cmd.CreatedBy);
+        Category category = Category.Create(cmd.Name, cmd.Description, cmd.CreatedBy);
         _db.Categories.Add(category);
         await _db.SaveChangesAsync(ct);
         return Result<CategoryResponse>.Success(new CategoryResponse(category.Id, category.Name, category.Description, category.IsActive));

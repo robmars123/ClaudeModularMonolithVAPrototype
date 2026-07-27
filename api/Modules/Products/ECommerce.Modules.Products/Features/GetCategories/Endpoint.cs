@@ -1,4 +1,5 @@
 using ECommerce.Modules.Products.Features.CreateCategory;
+using ECommerce.Shared.Common;
 using ECommerce.Shared.Mediator;
 using FastEndpoints;
 
@@ -17,7 +18,7 @@ public class Endpoint : EndpointWithoutRequest<IReadOnlyList<CategoryResponse>>
 
     public override async Task HandleAsync(CancellationToken ct)
     {
-        var result = await _mediator.Send(new GetCategoriesQuery(), ct);
+        Result<IReadOnlyList<CategoryResponse>> result = await _mediator.Send(new GetCategoriesQuery(), ct);
         await Send.OkAsync(result.Value!, ct);
     }
 }

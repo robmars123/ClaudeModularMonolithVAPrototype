@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Reflection;
 using ECommerce.Shared.Mediator;
 
 namespace ECommerce.Shared.Behaviors;
@@ -17,7 +18,7 @@ public sealed class ValidationBehavior<TRequest, TResponse> : IPipelineBehavior<
     {
         if (request is IValidatableRequest validatable)
         {
-            var errors = validatable.Validate().Where(e => !string.IsNullOrWhiteSpace(e)).ToList();
+            List<string> errors = validatable.Validate().Where(e => !string.IsNullOrWhiteSpace(e)).ToList();
             if (errors.Count > 0)
                 return Task.FromResult(BuildFailure(errors));
         }
@@ -27,10 +28,10 @@ public sealed class ValidationBehavior<TRequest, TResponse> : IPipelineBehavior<
 
     private static TResponse BuildFailure(IReadOnlyList<string> errors)
     {
-        var factory = FailureFactories.GetOrAdd(typeof(TResponse), static responseType =>
+        Func<IReadOnlyList<string>, TResponse> factory = FailureFactories.GetOrAdd(typeof(TResponse), static responseType =>
         {
-            var listFactory = responseType.GetMethod("Failure", [typeof(IReadOnlyList<string>)]);
-            var stringFactory = responseType.GetMethod("Failure", [typeof(string)]);
+            MethodInfo? listFactory = responseType.GetMethod("Failure", [typeof(IReadOnlyList<string>)]);
+            MethodInfo? stringFactory = responseType.GetMethod("Failure", [typeof(string)]);
 
             if (listFactory is not null)
                 return errs => (TResponse)listFactory.Invoke(null, [errs])!;

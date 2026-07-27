@@ -22,7 +22,7 @@ public sealed class OrderPlacedQueueConsumer(IRabbitMqConnectionProvider connect
 
     protected override Task HandleAsync(string type, string payload, CancellationToken ct)
     {
-        var evt = JsonSerializer.Deserialize<OrderPlacedEvent>(payload);
+        OrderPlacedEvent? evt = JsonSerializer.Deserialize<OrderPlacedEvent>(payload);
         logger.LogInformation(
             "[RabbitMQ point-to-point] Received {Type} for order {OrderNumber} ({LineCount} line(s)).",
             type, evt?.OrderNumber, evt?.Lines.Count ?? 0);

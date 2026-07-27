@@ -13,17 +13,17 @@ public sealed class CorrelationIdMiddlewareTests
     [Fact]
     public async Task Generates_a_correlation_id_when_the_request_has_none()
     {
-        var correlation = new CorrelationIdAccessor();
+        CorrelationIdAccessor correlation = new CorrelationIdAccessor();
         // AsyncLocal changes only flow into code awaited from within InvokeAsync (i.e. the rest of
         // the pipeline via "next") — exactly like production — not back out to this test after it
         // returns, so the downstream assertion has to happen inside "next" itself.
         string? seenByDownstreamPipeline = null;
-        var middleware = new CorrelationIdMiddleware(_ =>
+        CorrelationIdMiddleware middleware = new CorrelationIdMiddleware(_ =>
         {
             seenByDownstreamPipeline = correlation.CorrelationId;
             return Task.CompletedTask;
         });
-        var context = new DefaultHttpContext();
+        DefaultHttpContext context = new DefaultHttpContext();
 
         await middleware.InvokeAsync(context, correlation, NullLogger<CorrelationIdMiddleware>.Instance);
 
@@ -34,14 +34,14 @@ public sealed class CorrelationIdMiddlewareTests
     [Fact]
     public async Task Reuses_an_incoming_correlation_id_instead_of_generating_a_new_one()
     {
-        var correlation = new CorrelationIdAccessor();
+        CorrelationIdAccessor correlation = new CorrelationIdAccessor();
         string? seenByDownstreamPipeline = null;
-        var middleware = new CorrelationIdMiddleware(_ =>
+        CorrelationIdMiddleware middleware = new CorrelationIdMiddleware(_ =>
         {
             seenByDownstreamPipeline = correlation.CorrelationId;
             return Task.CompletedTask;
         });
-        var context = new DefaultHttpContext();
+        DefaultHttpContext context = new DefaultHttpContext();
         context.Request.Headers[HeaderName] = "caller-supplied-id";
 
         await middleware.InvokeAsync(context, correlation, NullLogger<CorrelationIdMiddleware>.Instance);

@@ -1,3 +1,4 @@
+using ECommerce.Modules.Products.Entities;
 using ECommerce.Modules.Products.Persistence;
 using ECommerce.Shared.Common;
 using ECommerce.Shared.Mediator;
@@ -11,7 +12,7 @@ public class DeleteProductHandler : IRequestHandler<DeleteProductCommand, Result
 
     public async Task<Result> Handle(DeleteProductCommand cmd, CancellationToken ct)
     {
-        var product = await _db.Products.FindAsync([cmd.ProductId], ct);
+        Product? product = await _db.Products.FindAsync([cmd.ProductId], ct);
         if (product is null) return Result.Failure("Product not found.");
         product.Deactivate(cmd.DeletedBy);
         await _db.SaveChangesAsync(ct);

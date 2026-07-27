@@ -17,7 +17,7 @@ public class Product : AuditableEntity
 
     public static Product Create(string name, string description, string sku, decimal price, Guid categoryId, string? imageUrl, string createdBy)
     {
-        var p = new Product { Name = name, Description = description, SKU = sku, Price = price, CategoryId = categoryId, ImageUrl = imageUrl };
+        Product p = new Product { Name = name, Description = description, SKU = sku, Price = price, CategoryId = categoryId, ImageUrl = imageUrl };
         p.SetCreatedBy(createdBy);
         return p;
     }

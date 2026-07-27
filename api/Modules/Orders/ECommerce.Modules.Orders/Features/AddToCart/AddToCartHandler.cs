@@ -25,15 +25,15 @@ public class AddToCartHandler : IRequestHandler<AddToCartCommand, Result<CartRes
             return Result<CartResponse>.Failure("Quantity must be greater than zero.");
 
         // Resolve name/price from the Products module — the client only sends an id.
-        var productResult = await _sender.Send(new GetProductPricingRequest(cmd.ProductId), ct);
+        Result<ProductPricingDto> productResult = await _sender.Send(new GetProductPricingRequest(cmd.ProductId), ct);
         if (!productResult.IsSuccess)
             return Result<CartResponse>.Failure("Product not found.");
 
-        var product = productResult.Value!;
+        ProductPricingDto product = productResult.Value!;
         if (!product.IsActive)
             return Result<CartResponse>.Failure($"Product '{product.Name}' is no longer available.");
 
-        var cart = await _db.Carts
+        Cart? cart = await _db.Carts
             .Include(c => c.Items)
             .FirstOrDefaultAsync(c => c.UserId == cmd.UserId && c.Status == "Active", ct);
 
@@ -44,9 +44,9 @@ public class AddToCartHandler : IRequestHandler<AddToCartCommand, Result<CartRes
         }
 
         // Check availability from the Inventory module against the total quantity in the cart.
-        var alreadyInCart = cart.Items.FirstOrDefault(i => i.ProductId == cmd.ProductId)?.Quantity ?? 0;
-        var availability = await _sender.Send(new GetStockAvailabilityRequest(cmd.ProductId), ct);
-        var available = availability.IsSuccess ? availability.Value : 0;
+        int alreadyInCart = cart.Items.FirstOrDefault(i => i.ProductId == cmd.ProductId)?.Quantity ?? 0;
+        Result<int> availability = await _sender.Send(new GetStockAvailabilityRequest(cmd.ProductId), ct);
+        int available = availability.IsSuccess ? availability.Value : 0;
 
         if (alreadyInCart + cmd.Quantity > available)
             return Result<CartResponse>.Failure($"Only {available} unit(s) of '{product.Name}' available.");
@@ -55,13 +55,13 @@ public class AddToCartHandler : IRequestHandler<AddToCartCommand, Result<CartRes
 
         // New items carry a pre-set Guid key, so change detection on a tracked cart would
         // mistake them for existing rows (UPDATE instead of INSERT) — mark them Added explicitly.
-        var item = cart.Items.First(i => i.ProductId == cmd.ProductId);
+        CartItem item = cart.Items.First(i => i.ProductId == cmd.ProductId);
         if (_db.Entry(item).State == EntityState.Detached)
             _db.CartItems.Add(item);
 
         await _db.SaveChangesAsync(ct);
 
-        var response = new CartResponse(
+        CartResponse response = new CartResponse(
             cart.Id, cart.UserId,
             cart.Items.Select(i => new CartItemResponse(i.Id, i.ProductId, i.ProductName, i.UnitPrice, i.Quantity, i.UnitPrice * i.Quantity)).ToList(),
             cart.TotalAmount, cart.Status, cart.CreatedAt);

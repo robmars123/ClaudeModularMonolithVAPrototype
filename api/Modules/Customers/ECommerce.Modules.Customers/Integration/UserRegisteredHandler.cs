@@ -24,7 +24,7 @@ public class UserRegisteredHandler : INotificationHandler<UserRegisteredEvent>
         if (await _db.Customers.AnyAsync(c => c.UserId == notification.UserId, ct))
             return;
 
-        var customer = Customer.Create(notification.UserId, notification.FirstName, notification.LastName, notification.Email);
+        Customer customer = Customer.Create(notification.UserId, notification.FirstName, notification.LastName, notification.Email);
         _db.Customers.Add(customer);
         await _db.SaveChangesAsync(ct);
 
