@@ -7,6 +7,7 @@ using ECommerce.Shared.IntegrationEvents;
 using ECommerce.Shared.Mediator;
 using ECommerce.Shared.Messaging;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace ECommerce.Modules.Orders.Features.PlaceOrder;
@@ -19,7 +20,7 @@ public class PlaceOrderHandler : IRequestHandler<PlaceOrderCommand, Result<Order
     private readonly PlaceOrderIdempotencyGuard _idempotency;
     private readonly ILogger<PlaceOrderHandler> _logger;
 
-    public PlaceOrderHandler(OrdersDbContext db, IMediator mediator, IIntegrationEventPublisher integrationEvents, PlaceOrderIdempotencyGuard idempotency, ILogger<PlaceOrderHandler> logger)
+    public PlaceOrderHandler(OrdersDbContext db, IMediator mediator, [FromKeyedServices(OrdersModule.PublisherKey)] IIntegrationEventPublisher integrationEvents, PlaceOrderIdempotencyGuard idempotency, ILogger<PlaceOrderHandler> logger)
     {
         _db = db; _mediator = mediator; _integrationEvents = integrationEvents; _idempotency = idempotency; _logger = logger;
     }

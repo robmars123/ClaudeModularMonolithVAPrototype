@@ -7,6 +7,7 @@ using ECommerce.Shared.Mediator;
 using ECommerce.Shared.Messaging;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore.Storage;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace ECommerce.Modules.Users.Features.RegisterUser;
@@ -21,7 +22,7 @@ public class RegisterUserHandler : IRequestHandler<RegisterUserCommand, Result<A
     private readonly IIntegrationEventPublisher _integrationEvents;
     private readonly ILogger<RegisterUserHandler> _logger;
 
-    public RegisterUserHandler(UserManager<ApplicationUser> users, UsersDbContext db, AuthTokenIssuer issuer, IPublisher publisher, IIntegrationEventPublisher integrationEvents, ILogger<RegisterUserHandler> logger)
+    public RegisterUserHandler(UserManager<ApplicationUser> users, UsersDbContext db, AuthTokenIssuer issuer, IPublisher publisher, [FromKeyedServices(UsersModule.PublisherKey)] IIntegrationEventPublisher integrationEvents, ILogger<RegisterUserHandler> logger)
     {
         _users = users; _db = db; _issuer = issuer; _publisher = publisher; _integrationEvents = integrationEvents; _logger = logger;
     }
@@ -67,6 +68,8 @@ public class RegisterUserHandler : IRequestHandler<RegisterUserCommand, Result<A
 
         // Pub/sub: broadcast on the topic exchange — every bound subscriber queue gets its own copy.
         // Enqueued into the same change tracker/transaction as the user, so it commits atomically with it.
+        // Destination here is the topic routing key ("user.registered"), not a queue name — each
+        // subscriber (Customers, EmailWorker) binds its own queue to this routing key independently.
         _integrationEvents.Enqueue(registeredEvent, MessageKind.PubSub, "user.registered");
         await _db.SaveChangesAsync(ct);
 

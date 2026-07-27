@@ -10,6 +10,9 @@ namespace ECommerce.Modules.Products;
 
 public class ProductsModule : IModuleRegistration
 {
+    /// <summary>Keyed-DI key for this module's <see cref="IIntegrationEventPublisher"/> — see <see cref="ECommerce.Modules.Users.UsersModule.PublisherKey"/> for why this must be keyed.</summary>
+    public const string PublisherKey = "products";
+
     public IServiceCollection RegisterModule(IServiceCollection services, IConfiguration configuration)
     {
         services.AddDbContext<ProductsDbContext>(options =>
@@ -17,7 +20,7 @@ public class ProductsModule : IModuleRegistration
 
         services.AddMediator(typeof(ProductsModule).Assembly);
 
-        services.AddScoped<IIntegrationEventPublisher, EfOutboxIntegrationEventPublisher<ProductsDbContext>>();
+        services.AddKeyedScoped<IIntegrationEventPublisher, EfOutboxIntegrationEventPublisher<ProductsDbContext>>(PublisherKey);
         services.AddScoped<IOutboxStore, EfOutboxStore<ProductsDbContext>>();
 
         return services;

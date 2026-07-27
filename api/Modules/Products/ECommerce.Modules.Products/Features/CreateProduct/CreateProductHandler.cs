@@ -6,6 +6,7 @@ using ECommerce.Shared.IntegrationEvents;
 using ECommerce.Shared.Mediator;
 using ECommerce.Shared.Messaging;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace ECommerce.Modules.Products.Features.CreateProduct;
@@ -17,7 +18,7 @@ public class CreateProductHandler : IRequestHandler<CreateProductCommand, Result
     private readonly IIntegrationEventPublisher _integrationEvents;
     private readonly ILogger<CreateProductHandler> _logger;
 
-    public CreateProductHandler(ProductsDbContext db, IPublisher publisher, IIntegrationEventPublisher integrationEvents, ILogger<CreateProductHandler> logger)
+    public CreateProductHandler(ProductsDbContext db, IPublisher publisher, [FromKeyedServices(ProductsModule.PublisherKey)] IIntegrationEventPublisher integrationEvents, ILogger<CreateProductHandler> logger)
     {
         _db = db; _publisher = publisher; _integrationEvents = integrationEvents; _logger = logger;
     }

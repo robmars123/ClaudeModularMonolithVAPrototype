@@ -13,6 +13,11 @@ namespace ECommerce.Modules.Users;
 
 public class UsersModule : IModuleRegistration
 {
+    /// <summary>Keyed-DI key for this module's <see cref="IIntegrationEventPublisher"/> — without a key, every
+    /// module's non-keyed registration of the same interface would collide, and DI would silently resolve
+    /// whichever module registered last for everyone (see <see cref="EfOutboxIntegrationEventPublisher{TDbContext}"/>).</summary>
+    public const string PublisherKey = "users";
+
     public IServiceCollection RegisterModule(IServiceCollection services, IConfiguration configuration)
     {
         services.AddDbContext<UsersDbContext>(o =>
@@ -35,7 +40,7 @@ public class UsersModule : IModuleRegistration
         services.AddScoped<AuthTokenIssuer>();
         services.AddMediator(typeof(UsersModule).Assembly);
 
-        services.AddScoped<IIntegrationEventPublisher, EfOutboxIntegrationEventPublisher<UsersDbContext>>();
+        services.AddKeyedScoped<IIntegrationEventPublisher, EfOutboxIntegrationEventPublisher<UsersDbContext>>(PublisherKey);
         services.AddScoped<IOutboxStore, EfOutboxStore<UsersDbContext>>();
 
         return services;

@@ -11,6 +11,9 @@ namespace ECommerce.Modules.Orders;
 
 public class OrdersModule : IModuleRegistration
 {
+    /// <summary>Keyed-DI key for this module's <see cref="IIntegrationEventPublisher"/> — see <see cref="ECommerce.Modules.Users.UsersModule.PublisherKey"/> for why this must be keyed.</summary>
+    public const string PublisherKey = "orders";
+
     public IServiceCollection RegisterModule(IServiceCollection services, IConfiguration configuration)
     {
         services.AddDbContext<OrdersDbContext>(options =>
@@ -19,7 +22,7 @@ public class OrdersModule : IModuleRegistration
         services.AddMediator(typeof(OrdersModule).Assembly);
         services.AddSingleton<PlaceOrderIdempotencyGuard>();
 
-        services.AddScoped<IIntegrationEventPublisher, EfOutboxIntegrationEventPublisher<OrdersDbContext>>();
+        services.AddKeyedScoped<IIntegrationEventPublisher, EfOutboxIntegrationEventPublisher<OrdersDbContext>>(PublisherKey);
         services.AddScoped<IOutboxStore, EfOutboxStore<OrdersDbContext>>();
 
         return services;
